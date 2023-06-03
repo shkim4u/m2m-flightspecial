@@ -1,6 +1,33 @@
+spring:
+  profiles:
+    active: local
+---
+spring:
+  profiles:
+    group:
+      local: common-config
+---
+spring:
+  profiles:
+    group:
+      test: common-config, cloud-property
+---
+## 환경별 공통 설정 내용
+spring:
+  application:
+    name: flightspecial
+  config:
+    activate:
+      on-profile: common-config
+  flyway:
+    enabled: false
+logging:
+  config: classpath:log4j2.xml
+  level:
+    io.awspring.cloud.paramstore: debug
 ## Embedded Tomcat Server Properties
 server:
-  port: 8081
+  port: 8080
   servlet:
     context-path: "/"
     encoding:
@@ -12,9 +39,12 @@ server:
     threads:
       max: 200
       min-spare: 100
-
+---
 ## DATASOURCE & JPA
 spring:
+  config:
+    activate:
+      on-profile: local, default
   datasource:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://localhost:5432/dso
@@ -38,3 +68,52 @@ spring:
         show-sql: true
         "[use_sql_comments]": true
         "[use_jdbc_metadata_defaults]": true
+  flyway:
+    enabled: true
+    validate-migration-naming: true
+    locations: classpath:db/migration/common, classpath:db/migration/sample
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    driver-class-name: com.amazonaws.secretsmanager.sql.AWSSecretsManagerPostgreSQLDriver
+    url: jdbc-secretsmanager:postgresql://${DATABASE_ENDPOINT}:${DATABASE_PORT}/dso
+#    username: flightspecial_db_credentials_test
+    username: ${DATABASE_USERNAME}
+    hikari:
+      connectionTestQuery: "SELECT 1"
+      maximum-pool-size: 50
+      minimum-idle: 50
+  jpa:
+    database: "postgresql"
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        "[default_schema]": "travelbuddy"
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        hbm2ddl:
+          "[import_files_sql_extractor]": org.hibernate.tool.hbm2ddl.MultipleLinesSqlCommandExtractor
+        "[format_sql]": false
+        show-sql: true
+        "[use_sql_comments]": true
+        "[use_jdbc_metadata_defaults]": true
+  flyway:
+    enabled: true
+    validate-migration-naming: true
+    locations: classpath:db/migration/common, classpath:db/migration/sample
+logging:
+  level:
+    root: INFO
+    org.hibernate.SQL: DEBUG
+---
+#############################################################################################
+# AWS Cloud 상의 Property Sources 참조
+spring:
+  config:
+    activate:
+      on-profile: cloud-property
+    import: "aws-parameterstore:"
+#############################################################################################

@@ -72,12 +72,15 @@ project(':infrastructure') {
         testImplementation "org.testcontainers:testcontainers:1.16.3"
         testImplementation "org.testcontainers:junit-jupiter:1.16.3"
         testImplementation "org.testcontainers:postgresql:1.16.3"
+
+        // https://mvnrepository.com/artifact/com.amazonaws.secretsmanager/aws-secretsmanager-jdbc
+        implementation group: 'com.amazonaws.secretsmanager', name: 'aws-secretsmanager-jdbc', version: '1.0.12'
     }
 }
 
 project(':interface') {
     bootJar.enabled = true
-    bootJar.archiveFileName = "flight.jar"
+    bootJar.archiveFileName = "flightspecials.jar"
     jar.enabled = false
     dependencies {
         implementation project(':application')

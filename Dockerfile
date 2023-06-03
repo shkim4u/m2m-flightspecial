@@ -5,7 +5,7 @@ ARG BASE_IMG_NAME="openjdk11"
 ARG BASE_IMG_VERS="jre-11.0.14.1_1-alpine"
 FROM ${BASE_REGISTRY}/${BASE_IMG_NAME}:${BASE_IMG_VERS}
 
-ARG APP_NAME="flight"
+ARG APP_NAME="flightspecials"
 
 COPY interface/build/libs/${APP_NAME}.jar /source001/boot.jar
 RUN chmod +x /source001/boot.jar

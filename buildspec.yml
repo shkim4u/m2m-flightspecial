@@ -1,0 +1,57 @@
+version: 0.2
+env:
+  shell: bash
+  git-credential-helper: yes
+  variables:
+    REGION: "ap-northeast-2"
+#    // Not needed any more because this script will modified the deploy manifest directly.
+#    IMAGE_TAG_KEY: "/application/flightspecial/container/image/main/tag"
+phases:
+  install:
+    # runtime-versions:
+    #   java: corretto11
+    commands:
+      - apt-get update
+      - apt-get install -y jq
+  pre_build:
+    commands:
+      - echo "Print awscli version"
+      - aws --version
+      - echo "### SRC_VERISON-> ${CODEBUILD_RESOLVED_SOURCE_VERSION} | Logging-in to ECR"
+      - docker login --username AWS -p $(aws ecr get-login-password --region ${REGION}) ${ECR_REPO_URI}
+      - export TAG=${CODEBUILD_RESOLVED_SOURCE_VERSION}
+      - export TAG=$(echo $TAG | sed -e "s/\.//g"| tr '[:upper:]' '[:lower:]')
+      - export TAG=$(echo "${TAG:0:8}")
+      - export IMAGE_TAG="${TAG}"
+      - echo "## TAG-> ${TAG}"
+  build:
+    commands:
+      - |
+        echo "### Building FlightSpecials application ###"
+        chmod +x ./gradlew
+        ./gradlew clean build --no-daemon -x test
+      - |
+        echo "### Building Container Image ###"
+        echo $CODEBUILD_SRC_DIR
+        echo Build started on `date`
+        echo Building the Docker image...
+        docker build -t $ECR_REPO_URI:latest ./
+        docker images
+        docker tag $ECR_REPO_URI:latest $ECR_REPO_URI:$IMAGE_TAG
+      - |
+        echo "### Pushing Container Image ###"
+        docker push $ECR_REPO_URI:latest
+        docker push $ECR_REPO_URI:$IMAGE_TAG
+  post_build:
+    commands:
+#      - |
+#        echo "### Pushing container image tag to SSM for reuse ###"
+#        aws ssm put-parameter --name $IMAGE_TAG_KEY --value $IMAGE_TAG --type String --region $REGION --overwrite
+      - echo "${IMAGE_TAG}" >> build_output.txt
+artifacts:
+  files:
+    - build_output.txt
+    - interface/build/libs/flightspecials.jar
+cache:
+  paths:
+    - '/root/.gradle/caches/**/*'

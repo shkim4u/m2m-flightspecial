@@ -39,6 +39,13 @@ Monolith 예제인 TravelBuddy 애플리케이션에서 Flight 부분을 분해�
 
 2. 데이터베이스 실행
 
+   > (참고) ```docker-compose```가 설치되어 있지 않을 경우 아래 명령을 통해 먼저 설치한 후에 진행합니다.
+
+   ```bash
+   sudo curl -L "https://github.com/docker/compose/releases/download/v2.18.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+   sudo chmod +x /usr/local/bin/docker-compose
+   ```
+
    ```bash
    docker-compose up --build -d db
 
@@ -76,6 +83,11 @@ Monolith 예제인 TravelBuddy 애플리케이션에서 Flight 부분을 분해�
 
 #### A. 로컬에서 gradle 활용
 
+> (참고) Java가 설치되어 있지 않을 경우 아래와 같이 Java를 설치합니다.
+```bash
+sudo yum install -y java-11-amazon-corretto-headless
+```
+
 ```bash
 # 1. Package
 ./gradlew clean build
@@ -88,7 +100,7 @@ Monolith 예제인 TravelBuddy 애플리케이션에서 Flight 부분을 분해�
 
 ```bash
 # 1. (Optional) 환경변수
-export APP_PORT=8081 # default: 8081
+export APP_PORT=8080 # default: 8080
 export DB_VOLUME="db-data" # 컨테이너 볼륨을 사용하는 경우
 
 # 2. 컨테이너 이미지 빌드 및 실행

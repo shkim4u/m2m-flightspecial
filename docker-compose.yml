@@ -7,13 +7,13 @@ services:
     image: m2m-flight:dev
     container_name: app
     ports:
-      - "${APP_PORT:-8081}:${APP_PORT:-8081}"
+      - "${APP_PORT:-8080}:${APP_PORT:-8080}"
     build:
       context: .
       dockerfile: Dockerfile
     environment:
       JAVA_OPTS: |
-        -Dserver.port=${APP_PORT:-8081}
+        -Dserver.port=${APP_PORT:-8080}
         -Dspring.datasource.url=jdbc:postgresql://db:${DB_PORT:-5432}/${DB_DATABASE_NAME:-dso}
         -Dspring.datasource.username=${DB_USERNAME:-postgres}
         -Dspring.datasource.password=${DB_PASSWORD:-P@ssw0rd}
