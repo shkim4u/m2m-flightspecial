@@ -1,0 +1,6 @@
+ARG BASE_REGISTRY="docker.io/library"
+ARG BASE_IMG_NAME="postgres"
+ARG BASE_IMG_VERS="13.3-alpine"
+FROM ${BASE_REGISTRY}/${BASE_IMG_NAME}:${BASE_IMG_VERS}
+
+ADD ./init.sql /docker-entrypoint-initdb.d/

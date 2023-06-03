@@ -1,0 +1,55 @@
+version: "3.9"
+services:
+
+  app:
+    depends_on:
+      - db-init
+    image: m2m-flight:dev
+    container_name: app
+    ports:
+      - "${APP_PORT:-8081}:${APP_PORT:-8081}"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      JAVA_OPTS: |
+        -Dserver.port=${APP_PORT:-8081}
+        -Dspring.datasource.url=jdbc:postgresql://db:${DB_PORT:-5432}/${DB_DATABASE_NAME:-dso}
+        -Dspring.datasource.username=${DB_USERNAME:-postgres}
+        -Dspring.datasource.password=${DB_PASSWORD:-P@ssw0rd}
+        -Dspring.jpa.properties.hibernate.default_schema=${DB_DEFAULT_SCHEMA:-travelbuddy}
+
+  db-init:
+    depends_on:
+      - db
+    build:
+      context: env/db
+      dockerfile: Dockerfile-flyway
+    command: |
+      -url=jdbc:postgresql://db:5432/dso
+      -schemas=travelbuddy
+      -user=postgres
+      -password=P@ssw0rd
+      -connectRetries=60
+      clean migrate info
+
+  db:
+    image: m2m-flight-db:dev
+    container_name: db
+    build:
+      context: env/db
+      dockerfile: Dockerfile-db
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      TZ: Asia/Seoul
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-P@ssw0rd}
+      POSTGRES_INITDB_ARGS: --encoding=UTF-8
+    volumes:
+      - ${DB_VOLUME:-./env/db/data}:/var/lib/postgresql/data
+
+volumes:
+  db-data:
+    external: true

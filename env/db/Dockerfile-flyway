@@ -1,0 +1,9 @@
+ARG BASE_REGISTRY="docker.io/flyway"
+ARG BASE_IMG_NAME="flyway"
+ARG BASE_IMG_VERS="8.5.9-alpine"
+FROM ${BASE_REGISTRY}/${BASE_IMG_NAME}:${BASE_IMG_VERS}
+
+ADD ./schema /flyway/sql
+
+ENTRYPOINT ["flyway"]
+CMD ["-?"]
