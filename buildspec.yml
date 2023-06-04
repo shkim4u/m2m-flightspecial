@@ -4,6 +4,7 @@ env:
   git-credential-helper: yes
   variables:
     REGION: "ap-northeast-2"
+    ENVIRONMENT: test
 #    // Not needed any more because this script will modified the deploy manifest directly.
 #    IMAGE_TAG_KEY: "/application/flightspecial/container/image/main/tag"
 phases:
@@ -24,6 +25,12 @@ phases:
       - export TAG=$(echo "${TAG:0:8}")
       - export IMAGE_TAG="${TAG}"
       - echo "## TAG-> ${TAG}"
+      - echo "### Retrieving database information..."
+      - export DATABASE_ENDPOINT=`aws cloudformation describe-stacks --region ${AWS_REGION} --query "Stacks[?StackName=='M2M-FlightSpecialDatabaseStack'][].Outputs[?OutputKey=='M2MFlightSpecialDatabaseStackFlightSpecialDBEndpoint'].OutputValue" --output text`;
+      - export DATABASE_PORT=`aws cloudformation describe-stacks --region ${AWS_REGION} --query "Stacks[?StackName=='M2M-FlightSpecialDatabaseStack'][].Outputs[?OutputKey=='M2MFlightSpecialDatabaseStackFlightSpecialDBPort'].OutputValue" --output text`;
+#      - [TODO] DATABASE_USERNAME: Currently fixed from secrets manager.
+      - export DATABASE_USERNAME=flightspecial_db_credentials_test
+      - env
   build:
     commands:
       - |
@@ -48,6 +55,23 @@ phases:
 #        echo "### Pushing container image tag to SSM for reuse ###"
 #        aws ssm put-parameter --name $IMAGE_TAG_KEY --value $IMAGE_TAG --type String --region $REGION --overwrite
       - echo "${IMAGE_TAG}" >> build_output.txt
+      - git config --global --replace-all credential.helper '!aws codecommit credential-helper $@'
+#        [TODO] 아래 클론 시의 Repository URL 값도 CodeBuild의 환경변수 혹은 CloudFormation Output으로부터 주입되면 좋습니다.
+      - |
+        echo "### Update value to manifest repository ###"
+        git clone https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpaecialCICDStack-DeployStack-DeploySourceRepository
+        cd M2M-FlightSpaecialCICDStack-DeployStack-DeploySourceRepository
+        ls
+        cat values-template.yaml | envsubst > ./values.yaml
+        cat ./values.yaml
+        git status
+        git config user.email "anyone@example.com"
+        git config user.name "FlightSpecial Developer"
+        git add .
+        git commit -m "Updated image tag to $IMAGE_TAG"
+        git log --oneline
+        git remote -v
+        git push -u origin main
 artifacts:
   files:
     - build_output.txt

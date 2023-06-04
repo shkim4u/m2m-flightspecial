@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Configuration status="INFO" monitorInterval="30">
+    <Properties>
+        <Property name="FS">- %d%-5level[domain:flightspecials][%c{1}][%X{x-customer-id}][%thread] %encode{%msg}{CRLF} -- %X{dd.trace_id} %X{dd.span_id}%n</Property>
+        <Property name="ACCESS">- %msg -- %X{dd.trace_id} %X{dd.span_id}%n</Property>
+        <Property name="JOB">- %d%-5level[domain:flightspecials][%c{1}] %encode{%msg}%n</Property>
+    </Properties>
+    <Appenders>
+        <Console name="ConsoleJSONAppender" target="SYSTEM_OUT">
+            <JsonLayout charset="UTF-8" complete="false" compact="true" eventEol="true" objectMessageAsJsonObject="true" properties="true" propertiesAsList="false"/>
+        </Console>
+        <Console name="ConsoleAppender" target="SYSTEM_OUT">
+            <PatternLayout charset="UTF-8" pattern="${FS}"/>
+        </Console>
+        <Console name="AccessConsoleAppender" target="SYSTEM_OUT" >
+            <PatternLayout charset="UTF-8" pattern="${ACCESS}"/>
+        </Console>
+
+
+        <RollingFile name="OrderFileAppender"
+                     fileName="./logs/flightspecials.log"
+                     filePattern="./logs/flightspecials-%d{yyyy-MM-dd-hh}-%i.log">
+            <Filters>
+                <ThresholdFilter level="info"  onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+            <PatternLayout charset="UTF-8" pattern="${FS}" />
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="6" />
+                <SizeBasedTriggeringPolicy size="100000KB" />
+            </Policies>
+            <DefaultRolloverStrategy max="20" fileIndex="min">
+                <Delete basePath="./logs" maxDepth="1">
+                    <IfFileName glob="flightspecials-*.log">
+                        <IfLastModified age="PT2H" />
+                    </IfFileName>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+        <RollingFile name="AccessFileAppender"
+                     fileName="./logs/access.log"
+                     filePattern="./logs/access-%d{yyyy-MM-dd-hh}-%i.log">
+            <PatternLayout charset="UTF-8" pattern="${ACCESS}" />
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" />
+                <SizeBasedTriggeringPolicy size="10000KB" />
+            </Policies>
+            <DefaultRolloverStrategy max="10" fileIndex="min">
+                <Delete basePath="./logs" maxDepth="1">
+                    <IfFileName glob="access-*.log">
+                        <IfLastModified age="PT1H" />
+                    </IfFileName>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+        <RollingFile name="ErrorFileAppender"
+                     fileName="./logs/error.log"
+                     filePattern="./logs/error-%d{yyyy-MM-dd}-%i.log">
+            <Filters>
+                <ThresholdFilter level="error"  onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+            <PatternLayout charset="UTF-8" pattern="${FS}" />
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" />
+                <SizeBasedTriggeringPolicy size="10000KB" />
+            </Policies>
+            <DefaultRolloverStrategy max="10" fileIndex="min">
+                <Delete basePath="./logs" maxDepth="1">
+                    <IfFileName glob="error-*.log">
+                        <IfLastModified age="PT1H" />
+                    </IfFileName>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+    </Appenders>
+    <Loggers>
+        <Root level="INFO">
+            <AppenderRef ref="ConsoleAppender"/>
+        </Root>
+
+        <Logger name="org.springframework" level="ERROR" additivity="false">
+            <AppenderRef ref="ConsoleAppender"/>
+        </Logger>
+
+        <Logger name="kr.co.travelbuddy.interceptor.LoggerInterceptor" level="WARN" additivity="false">
+            <AppenderRef ref="AccessConsoleAppender"/>
+        </Logger>
+
+        <Logger name="kr.co.travelbuddy" additivity="false">
+            <AppenderRef ref="ConsoleAppender"/>
+        </Logger>
+    </Loggers>
+</Configuration>

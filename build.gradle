@@ -9,6 +9,13 @@ version = '0.0.1-SNAPSHOT'
 sourceCompatibility = '11'
 
 allprojects {
+    configurations {
+        implementation {
+            exclude group: 'org.slf4j', module: 'slf4j-simple'
+            all*.exclude group: 'org.springframework.boot', module : 'spring-boot-starter-logging'
+        }
+    }
+
     repositories {
         mavenCentral()
     }
@@ -73,8 +80,6 @@ project(':infrastructure') {
         testImplementation "org.testcontainers:junit-jupiter:1.16.3"
         testImplementation "org.testcontainers:postgresql:1.16.3"
 
-        // https://mvnrepository.com/artifact/com.amazonaws.secretsmanager/aws-secretsmanager-jdbc
-        implementation group: 'com.amazonaws.secretsmanager', name: 'aws-secretsmanager-jdbc', version: '1.0.12'
     }
 }
 
@@ -82,6 +87,24 @@ project(':interface') {
     bootJar.enabled = true
     bootJar.archiveFileName = "flightspecials.jar"
     jar.enabled = false
+
+    ext {
+        // Dependency management for Spring Cloud AWS.
+        springCloudAwsVersion = '2.4.2'
+        springCloudVersion = '2021.0.3'
+
+        // [2021-12-29] log4j2 security issue hot fix (2.17.0 -> 2.17.1)
+        set ('log4j2.version', '2.17.1')
+    }
+
+    dependencyManagement {
+        imports {
+            mavenBom "io.awspring.cloud:spring-cloud-aws-dependencies:${springCloudAwsVersion}"
+            //OpenFeign, https://spring.io/projects/spring-cloud 의 Release Train 참고 하여 spring boot 버전에 맞는 버전 사용
+            mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+        }
+    }
+
     dependencies {
         implementation project(':application')
         implementation project(':infrastructure')
@@ -89,5 +112,17 @@ project(':interface') {
         implementation 'org.springframework.kafka:spring-kafka'
         implementation 'org.springframework.boot:spring-boot-starter-validation'
         implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.3'
+
+        implementation 'org.springframework.boot:spring-boot-starter-log4j2' // log4j2
+
+        // Spring Cloud AWS.
+        implementation 'io.awspring.cloud:spring-cloud-starter-aws-parameter-store-config'
+        implementation 'io.awspring.cloud:spring-cloud-starter-aws-secrets-manager-config'
+        // https://mvnrepository.com/artifact/com.amazonaws.secretsmanager/aws-secretsmanager-jdbc
+        implementation group: 'com.amazonaws.secretsmanager', name: 'aws-secretsmanager-jdbc', version: '1.0.12'
+        implementation group: 'com.amazonaws.secretsmanager', name: 'aws-secretsmanager-caching-java', version: '1.0.2'
+
+        // https://mvnrepository.com/artifact/org.flywaydb/flyway-core
+        implementation group: 'org.flywaydb', name: 'flyway-core', version: '7.15.0'
     }
 }

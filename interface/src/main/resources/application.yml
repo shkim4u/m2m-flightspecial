@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: local
+    active: test
 ---
 spring:
   profiles:
@@ -15,7 +15,7 @@ spring:
 ## 환경별 공통 설정 내용
 spring:
   application:
-    name: flightspecial
+    name: flightspecials
   config:
     activate:
       on-profile: common-config
@@ -115,5 +115,5 @@ spring:
   config:
     activate:
       on-profile: cloud-property
-    import: "aws-parameterstore:"
+    import: "optional:aws-parameterstore:"
 #############################################################################################
