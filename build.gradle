@@ -125,6 +125,12 @@ project(':interface') {
 
         implementation platform('software.amazon.awssdk:bom:2.16.64')
 
+        /*
+        * [2023-06-10] Fixing not assuming IRSA role.
+        * - https://github.com/external-secrets/kubernetes-external-secrets/issues/452
+         */
+        implementation 'com.amazonaws:aws-java-sdk-sts:1.12.484'
+
         // Spring Cloud AWS.
         implementation 'io.awspring.cloud:spring-cloud-starter-aws-parameter-store-config'
         implementation 'io.awspring.cloud:spring-cloud-starter-aws-secrets-manager-config'
