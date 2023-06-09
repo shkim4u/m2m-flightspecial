@@ -1,4 +1,4 @@
-rootProject.name = 'flight'
+rootProject.name = 'm2m-flightspecial'
 include 'domain'
 include 'application'
 include 'infrastructure'

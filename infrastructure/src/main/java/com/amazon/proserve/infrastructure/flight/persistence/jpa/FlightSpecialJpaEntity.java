@@ -79,7 +79,7 @@ public class FlightSpecialJpaEntity {
 
         public FlightSpecial toDomainEntity() {
                 return FlightSpecial.builder()
-                                .header(Header.of(this.header))
+                                .header(Header.of("[" + System.getenv("CODEBUILD_BUILD_NUMBER") + "] ==> " + this.header))
                                 .body(Body.of(this.body))
                                 .origin(Origin.of(this.origin))
                                 .originCode(OriginCode.of(this.originCode))

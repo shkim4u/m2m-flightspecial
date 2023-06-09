@@ -68,6 +68,11 @@ project(':application') {
 }
 
 project(':infrastructure') {
+    ext {
+        CODEBUILD_BUILD_NUMBER = "0"
+        set ('CODEBUILD_BUILD_NUMBER', System.getenv("CODEBUILD_BUILD_NUMBER") ?: "0")
+    }
+
     dependencies {
         implementation project(':domain')
         implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.3'
@@ -80,6 +85,9 @@ project(':infrastructure') {
         testImplementation "org.testcontainers:junit-jupiter:1.16.3"
         testImplementation "org.testcontainers:postgresql:1.16.3"
 
+        // https://mvnrepository.com/artifact/org.gradle/api
+//        implementation group: 'org.gradle', name: 'api', version: '1.0'
+        implementation gradleApi()
     }
 }
 

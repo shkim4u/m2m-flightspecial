@@ -1,4 +1,4 @@
-# M2M FlightSpecial Service
+# M2M FlightSpecial Microservice
 
 Monolith 예제인 TravelBuddy 애플리케이션에서 Flight 부분을 분해하여 구현한 마이크로서비스 예제입니다.
 
