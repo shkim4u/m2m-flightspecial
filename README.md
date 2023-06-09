@@ -127,7 +127,27 @@ docker rmi $(docker images -f "dangling=true" -q)
 docker volume prune
 ```
 
-## 2. 빌드 파이프라인 연동
+## 2. 배포 리포지터리 설정
+1. 아래와 같이 Cloud9 환경에서 배포 리포지터리 파일 (Helm)을 클론합니다.<br>
+
+```bash
+cd ~/environment/
+git clone https://github.com/shkim4u/m2m-flightspecial-helm.git
+cd m2m-flightspecial-helm
+```
+
+2. 위에서 받은 소스를 배포 리포지터리 (CodeCommit)과 연결합니다.<br>
+```bash
+export HELM_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name M2M-FlightSpecialCICDStack-DeployStack-DeploySourceRepository --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
+
+# CodeCommit 배포 리포지터리(ccorigin으로 명명)와 연결
+git remote add ccorigin $HELM_CODECOMMIT_URL
+
+# 배포 리포지터리에 푸시
+git push --set-upstream ccorigin main
+```
+
+## 3. 빌드 파이프라인 연동
 ![GitOps Pipeline](./docs/assets/gitops_helm.png)
 
 1. 아래와 같이 Cloud9 환경에서 "m2m-flightspecial" 어플리케이션을 클론합니다.<br>
@@ -142,39 +162,20 @@ git clone https://github.com/shkim4u/m2m-flightspecial.git
 3. 위에서 확인한 리포지터리 URL과 현재 소스 코드를 연결합니다.<br>
 ```bash
 # AWS CLI를 통해서도 HTTPS URL을 바로 확인할 수 있습니다.
-export APP_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name M2M-FlightSpaecialCICDStack-SourceRepository --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
+export APP_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name M2M-FlightSpecialCICDStack-SourceRepository --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
 
 # CodeCommit 소스 리포지터리(ccorigin으로 명명)와 연결
 git remote add origin $APP_CODECOMMIT_URL
 # (예시)
-# git remote add origin https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpaecialCICDStack-SourceRepository
+# git remote add origin https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpecialCICDStack-SourceRepository
 
 # 소스 리포지터리에 푸시
  git push --set-upstream ccorigin main
 ```
 
 4. 빌드 파이프라인이 성공적으로 수행되는지 확인합니다.<br>
-![Build Pipeline Success](./docs/assets/flightspecial-build-pipeline-success.png)
+   ![Build Pipeline Success](./docs/assets/flightspecial-build-pipeline-success.png)
 
-## 3. 배포 리포지터리 설정
-1. 아래와 같이 Cloud9 환경에서 배포 리포지터리 파일 (Helm)을 클론합니다.<br>
-
-```bash
-cd ~/environment/
-git clone https://github.com/shkim4u/m2m-flightspecial-helm.git
-cd m2m-flightspecial-helm
-```
-
-2. 위에서 받은 소스를 배포 리포지터리 (CodeCommit)과 연결합니다.<br>
-```bash
-export HELM_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name M2M-FlightSpaecialCICDStack-DeployStack-DeploySourceRepository --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
-
-# CodeCommit 배포 리포지터리(ccorigin으로 명명)와 연결
-git remote add ccorigin $HELM_CODECOMMIT_URL
-
-# 배포 리포지터리에 푸시
-git push --set-upstream ccorigin main
-```
 
 ## 4. ArgoCD 설정
 1. ArgoCD 접속에 필요한 정보 확인 및 접속<br>
@@ -215,7 +216,7 @@ echo $ARGO_PWD
 
 - Connect Repo 버튼을 클릭하고 Method는 ```VIA HTTPS```, Project는 ```default```를 입력합니다.<br>
 
-- Repository URL에는 앞서 확인한 배포 CodeCommit Repository의 HTTPS 주소 (예: To ```https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpaecialCICDStack-DeployStack-DeploySourceRepository```
+- Repository URL에는 앞서 확인한 배포 CodeCommit Repository의 HTTPS 주소 (예: To ```https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpecialCICDStack-DeployStack-DeploySourceRepository```
 ), Username 및 Password는 메모해 둔 정보를 입력합니다.<br>
 ![ArgoCD Repository Connect](./docs/assets/argocd-repository-information.png)
 
@@ -258,8 +259,8 @@ echo $ARGO_PWD
         - |
              echo "### Update value to manifest repository ###"
                 #        [TODO] 이 값도 CodeBuild의 환경변수 혹은 CloudFormation Output으로부터 주입되면 좋습니다.
-             git clone https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpaecialCICDStack-DeployStack-DeploySourceRepository
-             cd M2M-FlightSpaecialCICDStack-DeployStack-DeploySourceRepository
+             git clone https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpecialCICDStack-DeployStack-DeploySourceRepository
+             cd M2M-FlightSpecialCICDStack-DeployStack-DeploySourceRepository
              ls
              cat values-template.yaml | envsubst > ./values.yaml
              cat ./values.yaml

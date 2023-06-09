@@ -59,8 +59,8 @@ phases:
 #        [TODO] 아래 클론 시의 Repository URL 값도 CodeBuild의 환경변수 혹은 CloudFormation Output으로부터 주입되면 좋습니다.
       - |
         echo "### Update value to manifest repository ###"
-        git clone https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpaecialCICDStack-DeployStack-DeploySourceRepository
-        cd M2M-FlightSpaecialCICDStack-DeployStack-DeploySourceRepository
+        git clone https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpecialCICDStack-DeployStack-DeploySourceRepository
+        cd M2M-FlightSpecialCICDStack-DeployStack-DeploySourceRepository
         ls
         cat values-template.yaml | envsubst > ./values.yaml
         cat ./values.yaml
