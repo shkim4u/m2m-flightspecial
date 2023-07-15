@@ -139,12 +139,20 @@ cd m2m-flightspecial-helm
 2. 위에서 받은 소스를 배포 리포지터리 (CodeCommit)과 연결합니다.<br>
 ```bash
 export HELM_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name M2M-FlightSpecialCICDStack-DeployStack-DeploySourceRepository --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
+echo $HELM_CODECOMMIT_URL
 
-# CodeCommit 배포 리포지터리(ccorigin으로 명명)와 연결
-git remote add ccorigin $HELM_CODECOMMIT_URL
+# Git 초기화
+rm -rf .git
+git init
+
+# CodeCommit 배포 리포지터리와 연결
+git branch -M main
+git remote add origin $HELM_CODECOMMIT_URL
 
 # 배포 리포지터리에 푸시
-git push --set-upstream ccorigin main
+git add .
+git commit -am "Firs commit."
+git push --set-upstream origin main
 ```
 
 ## 3. 빌드 파이프라인 연동
@@ -155,6 +163,7 @@ git push --set-upstream ccorigin main
 ```bash
 cd ~/environment
 git clone https://github.com/shkim4u/m2m-flightspecial.git
+cd m2m-flightspecial
 ```
 2. 빌드 파이프라인 소스 리포지터리의 URL을 확인합니다.<br>
    ![FlightSpecial 소스 리포 URL](./docs/assets/flightspecial-codecommit-repo-url.png)
@@ -163,14 +172,23 @@ git clone https://github.com/shkim4u/m2m-flightspecial.git
 ```bash
 # AWS CLI를 통해서도 HTTPS URL을 바로 확인할 수 있습니다.
 export APP_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name M2M-FlightSpecialCICDStack-SourceRepository --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
+echo $APP_CODECOMMIT_URL
 
-# CodeCommit 소스 리포지터리(ccorigin으로 명명)와 연결
+# Git 초기화
+rm -rf .git
+git init
+
+# CodeCommit 소스 리포지터리와 연결
+git branch -M main
 git remote add origin $APP_CODECOMMIT_URL
+
 # (예시)
 # git remote add origin https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpecialCICDStack-SourceRepository
 
 # 소스 리포지터리에 푸시
- git push --set-upstream ccorigin main
+git add .
+git commit -am "First commit."
+ git push --set-upstream origin main
 ```
 
 4. 빌드 파이프라인이 성공적으로 수행되는지 확인합니다.<br>
@@ -185,7 +203,8 @@ CDK를 통해서 이미 배포한 EKS 클러스터에는 ArgCD가 설치되어 �
 
 ```bash
 # ArgoCD 접속 주소 확인
-export ARGOCD_SERVER=`kubectl get svc argocd-server -n argocd -o json | jq --raw-output .status.loadBalancer.ingress[0].hostname`
+#export ARGOCD_SERVER=`kubectl get svc argocd-server -n argocd -o json | jq --raw-output .status.loadBalancer.ingress[0].hostname`
+export ARGOCD_SERVER=https://$(kubectl get ingress/argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[*].hostname}')
 echo $ARGOCD_SERVER
 
 # ArgoCD의 기본 사용자 (admin) 패스워드 확인
@@ -216,15 +235,14 @@ echo $ARGO_PWD
 
 - Connect Repo 버튼을 클릭하고 Method는 ```VIA HTTPS```, Project는 ```default```를 입력합니다.<br>
 
-- Repository URL에는 앞서 확인한 배포 CodeCommit Repository의 HTTPS 주소 (예: To ```https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpecialCICDStack-DeployStack-DeploySourceRepository```
-), Username 및 Password는 메모해 둔 정보를 입력합니다.<br>
+- Repository URL에는 앞서 확인한 배포 CodeCommit Repository의 HTTPS 주소 (예: To ```https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpecialCICDStack-DeployStack-DeploySourceRepository```), Username 및 Password는 메모해 둔 정보를 입력합니다.<br>
 ![ArgoCD Repository Connect](./docs/assets/argocd-repository-information.png)
 
 - Application 텝에서 NewApp버튼을 클릭합니다. Application Name 에는 ```flightspecials```를, Project는 default를 입력합니다. Sync Policy에는 "Manual"을, Repository URL에는 앞서 설정한 배포 리포지터리를, PATH에는 ```.```을 각각 입력합니다. Destination 섹션의 Cluster URL에는 ```https://kubernetes.default.svc```, Namespace에는 ```flightspecials```를 입력하고 상단의 Create를 클릭합니다.<br>
 ![ArgoCD FlightSpecials App](./docs/assets/argcd-app-flightspecials.png)
 
 ## 5. ArgoCD 배포 상태 확인<br>
-1. ArgoCD 화면에서 FlightSpecials의 배포 상태를 확인합니다.<br>
+1. ArgoCD 화면에서 FlightSpecials의 배포 상태를 확인하고, ```Sync Apps```를 클릭하여 배포를 수행해봅니다.<br>
 ![ArgoCD FlightSpecials App Status](./docs/assets/argocd-flightspecials-app-status.png)
 
 2. (오류 처리 예) 오류가 발생하였으면 App을 클릭하여 들어가서 자세한 상태를 봅니다.<br>

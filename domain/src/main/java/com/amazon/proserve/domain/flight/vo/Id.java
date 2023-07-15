@@ -7,5 +7,5 @@ import javax.validation.constraints.NotNull;
 @Value(staticConstructor = "of")
 public class Id {
     @NotNull
-    Integer value;
+    Long value;
 }

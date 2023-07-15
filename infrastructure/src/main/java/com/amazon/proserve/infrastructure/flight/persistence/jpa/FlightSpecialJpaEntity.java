@@ -31,7 +31,7 @@ public class FlightSpecialJpaEntity {
         @Id
         @Column(name = "id", nullable = false)
         @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private Integer id;
+        private Long id;
 
         @Column(name = "header", nullable = false)
         private String header;
@@ -79,14 +79,15 @@ public class FlightSpecialJpaEntity {
 
         public FlightSpecial toDomainEntity() {
                 return FlightSpecial.builder()
-                                .header(Header.of("[" + System.getenv("CODEBUILD_BUILD_NUMBER") + "] ==> " + this.header))
-                                .body(Body.of(this.body))
-                                .origin(Origin.of(this.origin))
-                                .originCode(OriginCode.of(this.originCode))
-                                .destination(Destination.of(this.destination))
-                                .destinationCode(DestinationCode.of(this.destinationCode))
-                                .cost(Cost.of(this.cost))
-                                .expiryDate(this.expiryDate)
-                                .build();
+                        .id(com.amazon.proserve.domain.flight.vo.Id.of(this.id))
+                        .header(Header.of("[" + System.getenv("CODEBUILD_BUILD_NUMBER") + "] ==> " + this.header))
+                        .body(Body.of(this.body))
+                        .origin(Origin.of(this.origin))
+                        .originCode(OriginCode.of(this.originCode))
+                        .destination(Destination.of(this.destination))
+                        .destinationCode(DestinationCode.of(this.destinationCode))
+                        .cost(Cost.of(this.cost))
+                        .expiryDate(this.expiryDate)
+                        .build();
         }
 }

@@ -55,7 +55,7 @@ public final class Flight {
      * 플라이트의 이름을 변경한다.
      * 변경하기 전의 이름은 플라이트 이름 이력 리스트에 추가된다.
      */
-    public void changeFlightName(final String newFlightName) {
+    public void updateFlightName(final String newFlightName) {
         FlightName oldName = this.flightName;
         FlightName newName = FlightName.of(newFlightName);
         this.addFlightNameHistory(oldName);
