@@ -1,6 +1,6 @@
-create table if not exists travelbuddy.flightspecial 
+create table if not exists travelbuddy.flightspecial
 (
-    id                              int4 GENERATED ALWAYS AS IDENTITY,
+    id                              int8 GENERATED ALWAYS AS IDENTITY,
     header                          varchar(255) not null,
     body                            varchar(255),
     origin                          varchar(255),

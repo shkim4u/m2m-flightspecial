@@ -333,10 +333,14 @@ psql -h 서버주소 -U 아이디 데이터베이스명
 
 우리는 TravelBuddy 실습 중에 생성한 ALB가 공유됨을 주목할 필요가 있습니다.<br>
 ![TravelBuddy ALB Shared](./docs/assets/travelbuddy-ingress-shared.png)
-![TravelBuddy ALB Shared](./docs/assets/travelbuddy-ingress-shared.png)
-
 
 ## 6. Argo Rollouts을 통한 Canary 배포<br>
+우리는 TravelBuddy Monolith 어플리케이션으로부터 FlightSpecials 서비스의 백엔드 기능을 API로 분리하고 이를 ArgoCD를 활용한 GitOps 체계로 배포할 수 있었습니다.
+
+하지만 현재 배포된 FlightSpecials 백엔드 기능은 각 FlightSpecials 항목의 이름을 수정하는 기능이 누락된 것이 발견되었습니다.
+
+FlightSpecials 마이크로서비스의 PO (Product Owner)는 Progressive Delivery & Deploy를 적용하기 위하여 Argo Rollouts을 적용해 보고 싶어합니다. 
+
 앞서 CDK로 배포한 자원에는 이미 Argo Rollouts 컨트롤러가 설치되어 있습니다.<br>
 이를 활용하여 FlightSpecials에 대한 Canary 배포를 적용해 보기로 하겠습니다.<br>
 
@@ -356,6 +360,8 @@ kubectl get services argo-rollouts-dashboard -n argo-rollouts -o=jsonpath={.stat
 
 3. 위에서 확인한 ```http://<Argo Rollouts Dashboard URL>:3100```으로 접속해 봅니다.<br>
 ![Argo Rollouts Dashboard](./docs/assets/argo-rollouts-dashboard.png)
+
+
 
 4. 배포 리포지터리의 Deployment 파일을 아래와 같이 변경하고 Rollouts 객체가 정상적으로 동작하는지 확인합니다.<br>
 ```bash
