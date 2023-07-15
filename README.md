@@ -363,8 +363,15 @@ kubectl get services argo-rollouts-dashboard -n argo-rollouts -o=jsonpath={.stat
 3. 위에서 확인한 ```http://<Argo Rollouts Dashboard URL>:3100```으로 접속해 봅니다.<br>
 ![Argo Rollouts Dashboard](./docs/assets/argo-rollouts-dashboard.png)
 
-4. 해당 기능이 구현된 소스를 다운받습니다. 이 기능은 강사에 의해 미리 구현되어 원본 Github Repository의```feature/update-header` 브랜치에 올라가 있습니다.
+4. 해당 기능이 구현된 소스를 다운받습니다. 이 기능은 강사에 의해 미리 구현되어 원본 Github Repository의```feature/update-header``` 브랜치에 올라가 있습니다.
 
+```bash
+# 원본 Github 리포지터리에서 구현 사항 다운로드
+git pull origin feature/update-header
+
+git commit -am "feature/update-header"
+git push --set-upstream ccorigin main
+```
 
 4. 배포 리포지터리의 Deployment 파일을 아래와 같이 변경하고 Rollouts 객체가 정상적으로 동작하는지 확인합니다.<br>
 ```bash
