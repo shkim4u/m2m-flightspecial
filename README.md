@@ -366,11 +366,18 @@ kubectl get services argo-rollouts-dashboard -n argo-rollouts -o=jsonpath={.stat
 4. 해당 기능이 구현된 소스를 다운받습니다. 이 기능은 강사에 의해 미리 구현되어 원본 Github Repository의```feature/update-header``` 브랜치에 올라가 있습니다.
 
 ```bash
+# 브랜치 생성
+git checkout -b feature/update-header
+
 # 원본 Github 리포지터리에서 구현 사항 다운로드
+# 혹시 머지 충돌 (Merge Conflict)가 발생하면 이를 해소합니다.
 git pull origin feature/update-header
 
 git commit -am "feature/update-header"
-git push --set-upstream ccorigin main
+git push --set-upstream ccorigin feature/update-header
+
+# AWS CodeCommit 콘솔 화면에서 Pull Request를 생성하고 이를 ```main``` 브랜치에 병합합니다.
+# 참고: https://catalog.workshops.aws/cicdonaws/ko-KR/lab02/6-create-pull-request
 ```
 
 4. 배포 리포지터리의 Deployment 파일을 아래와 같이 변경하고 Rollouts 객체가 정상적으로 동작하는지 확인합니다.<br>
