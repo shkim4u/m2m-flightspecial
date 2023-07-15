@@ -139,6 +139,7 @@ cd m2m-flightspecial-helm
 2. 위에서 받은 소스를 배포 리포지터리 (CodeCommit)과 연결합니다.<br>
 ```bash
 export HELM_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name M2M-FlightSpecialCICDStack-DeployStack-DeploySourceRepository --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
+echo $HELM_CODECOMMIT_URL
 
 # CodeCommit 배포 리포지터리(ccorigin으로 명명)와 연결
 git remote add ccorigin $HELM_CODECOMMIT_URL
@@ -163,9 +164,10 @@ git clone https://github.com/shkim4u/m2m-flightspecial.git
 ```bash
 # AWS CLI를 통해서도 HTTPS URL을 바로 확인할 수 있습니다.
 export APP_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name M2M-FlightSpecialCICDStack-SourceRepository --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
+echo $APP_CODECOMMIT_URL
 
 # CodeCommit 소스 리포지터리(ccorigin으로 명명)와 연결
-git remote add origin $APP_CODECOMMIT_URL
+git remote add ccorigin $APP_CODECOMMIT_URL
 # (예시)
 # git remote add origin https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpecialCICDStack-SourceRepository
 
@@ -361,6 +363,7 @@ kubectl get services argo-rollouts-dashboard -n argo-rollouts -o=jsonpath={.stat
 3. 위에서 확인한 ```http://<Argo Rollouts Dashboard URL>:3100```으로 접속해 봅니다.<br>
 ![Argo Rollouts Dashboard](./docs/assets/argo-rollouts-dashboard.png)
 
+4. 해당 기능이 구현된 소스를 다운받습니다. 이 기능은 강사에 의해 미리 구현되어 원본 Github Repository의```feature/update-header` 브랜치에 올라가 있습니다.
 
 
 4. 배포 리포지터리의 Deployment 파일을 아래와 같이 변경하고 Rollouts 객체가 정상적으로 동작하는지 확인합니다.<br>
