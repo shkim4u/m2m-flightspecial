@@ -6,11 +6,11 @@ Monolith 예제인 TravelBuddy 애플리케이션에서 Flight 부분을 분해�
 
 - 이론: Microservice란?
 - [Strangler Fig Pattern](./docs/strangler-fig.md) - FlightSpecial 서비스
-   - [Docker Compose](./docs/compose.md)
-   - [Package 구조](./docs/package.md)
+  - [Docker Compose](./docs/compose.md)
+  - [Package 구조](./docs/package.md)
 - 실습: [FlightSpecials](https://github.com/shkim4u/m2m-flightspecial) 애플리케이션을 분리
-   - Progressive Delivery with ArgoCD
-   - Canary Deployment with Argo Rollouts
+  - Progressive Delivery with ArgoCD
+  - Canary Deployment with Argo Rollouts
 - 부록: [API Gateway](./docs/apigw.md)
 - 부록: [CQRS 패턴](./docs/cqrs.md)
 
@@ -181,7 +181,7 @@ git remote add ccorigin $APP_CODECOMMIT_URL
 
 ## 4. ArgoCD 설정
 1. ArgoCD 접속에 필요한 정보 확인 및 접속<br>
-   CDK를 통해서 이미 배포한 EKS 클러스터에는 ArgCD가 설치되어 있으며, 또한 AWS ELB (Elastic Load Balancer)를 통하여 외부에서 접속할 수 있습니다.<br>
+CDK를 통해서 이미 배포한 EKS 클러스터에는 ArgCD가 설치되어 있으며, 또한 AWS ELB (Elastic Load Balancer)를 통하여 외부에서 접속할 수 있습니다.<br>
 
 아래와 같이 접속에 필요한 URL과 ```admin``` 암호를 확인합니다.<br>
 
@@ -214,37 +214,37 @@ echo $ARGO_PWD
 
 3. ArgoCD 설정<br>
 - 로그인 이후 좌측의 Settings 를 클릭한 뒤 Repositories 항목을 클릭합니다.<br>
-  ![ArgoCD Repository Settings](./docs/assets/argo-setting.png)
+![ArgoCD Repository Settings](./docs/assets/argo-setting.png)
 
 - Connect Repo 버튼을 클릭하고 Method는 ```VIA HTTPS```, Project는 ```default```를 입력합니다.<br>
 
 - Repository URL에는 앞서 확인한 배포 CodeCommit Repository의 HTTPS 주소 (예: To ```https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpecialCICDStack-DeployStack-DeploySourceRepository```
-  ), Username 및 Password는 메모해 둔 정보를 입력합니다.<br>
-  ![ArgoCD Repository Connect](./docs/assets/argocd-repository-information.png)
+), Username 및 Password는 메모해 둔 정보를 입력합니다.<br>
+![ArgoCD Repository Connect](./docs/assets/argocd-repository-information.png)
 
 - Application 텝에서 NewApp버튼을 클릭합니다. Application Name 에는 ```flightspecials```를, Project는 default를 입력합니다. Sync Policy에는 "Manual"을, Repository URL에는 앞서 설정한 배포 리포지터리를, PATH에는 ```.```을 각각 입력합니다. Destination 섹션의 Cluster URL에는 ```https://kubernetes.default.svc```, Namespace에는 ```flightspecials```를 입력하고 상단의 Create를 클릭합니다.<br>
-  ![ArgoCD FlightSpecials App](./docs/assets/argcd-app-flightspecials.png)
+![ArgoCD FlightSpecials App](./docs/assets/argcd-app-flightspecials.png)
 
 ## 5. ArgoCD 배포 상태 확인<br>
 1. ArgoCD 화면에서 FlightSpecials의 배포 상태를 확인합니다.<br>
-   ![ArgoCD FlightSpecials App Status](./docs/assets/argocd-flightspecials-app-status.png)
+![ArgoCD FlightSpecials App Status](./docs/assets/argocd-flightspecials-app-status.png)
 
 2. (오류 처리 예) 오류가 발생하였으면 App을 클릭하여 들어가서 자세한 상태를 봅니다.<br>
    ![FligtSpecials Status Failed](./docs/assets/argocd-flightspecials-sync-failed.png)<br>
    ![FligtSpecials Status Failed Reasons](./docs/assets/argocd-flightspecials-app-failed-no-namespace.png)<br>
 - 위에서 보듯 Namespace가 없어서 에러가 발생하였습니다.<br>
 - 아래와 같이 Namespace 정의 파일을 생성한 후 배포 리포지터리에 다시 푸시하면 오류가 해소됩니다.<br>
-  ![FlightSpecials Namespace](./docs/assets/flightspecials-namespace.png)<br>
-  ![FlightSpecials Namespace](./docs/assets/fligtspecials-push-namespace.png)<br>
+   ![FlightSpecials Namespace](./docs/assets/flightspecials-namespace.png)<br>
+   ![FlightSpecials Namespace](./docs/assets/fligtspecials-push-namespace.png)<br>
 
 3. (오류 처리 예) 여전히 Application이 Degrade 상태에 머물러 있을 수 있습니다.<br>
-   ![FlightSpecials Degraded](./docs/assets/fligtspecial-app-degraded.png)<br>
-   ![FlightSpecials Degraded Reason](./docs/assets/fligtspecial-app-degraded-reason.png)<br>
+![FlightSpecials Degraded](./docs/assets/fligtspecial-app-degraded.png)<br>
+![FlightSpecials Degraded Reason](./docs/assets/fligtspecial-app-degraded-reason.png)<br>
 
 위에서 보듯이 Deployment에 Templating된 컨테이너 이미지의 값이 정확하게 풀리지 않음으로써 발생하는 문제입니다.<br>
 
 4. (오류 처리 예) 빌드 파이프라인 수행 시에 빌드되는 컨테이너 이미지를 배포 (Helm) 리포지터리에 주입해 줌으로써 이 문제를 해결하도록 해보겠습니다. 이 작업은 ```m2m-flightspecials``` 프로젝트에서 수행합니다.<br>
-   핵심 부분은 post_build 부분에 정의된 아래 부분입니다.<br>
+핵심 부분은 post_build 부분에 정의된 아래 부분입니다.<br>
    i. 배포 (Helm) 리포를 Git Clone<br>
    ii. Deployment에 주입되는 컨테이너 이미지 정보를 환경 변수로부터 치환<br>
    iii. 배포 리포에 푸시<br>
@@ -280,7 +280,7 @@ echo $ARGO_PWD
 ![FlightSpecial Buildspec Updated](./docs/assets/flightspecial-buildspec-reflect-deploy.png)
 
 5. (옵션) Parameter Store/Secrets Manager 접근 권한 부족 - IRSA (IAM Role for) 설정 필요<br>
-   ![FlightSpecials IRSA Required](./docs/assets/flightspecials-no-iam-role.png)
+![FlightSpecials IRSA Required](./docs/assets/flightspecials-no-iam-role.png)
 
 6. (오류 처리 예) 빌드 파이프라인을 통해 컨테이너 이미지 정보가 정확하게 Deployment 명세로 주입이되면 Pod가 기동됨을 알 수 있습니다.<br>
 
@@ -293,7 +293,7 @@ echo $ARGO_PWD
 데이터베이스 정보를 주입해 줌으로써 이를 해소해 보겠습니다.
 
 7. 데이터베이스 정보 주입<br>
-   동적인 환경으로부터 설정값을 가져오는 방법은 여러가지가 있지만 여기에서는 다시 빌드 시 데이터베이스 엔드포인트와 포트는 CloudFormation으로부터, 그리고 데이터베이스 사용자 및 암호는 Secrets Manager로부터 얻어온 후 이 값으로 배포 Helm Chat의 values.template을 업데이트해 주기로 하였습니다.<br>
+동적인 환경으로부터 설정값을 가져오는 방법은 여러가지가 있지만 여기에서는 다시 빌드 시 데이터베이스 엔드포인트와 포트는 CloudFormation으로부터, 그리고 데이터베이스 사용자 및 암호는 Secrets Manager로부터 얻어온 후 이 값으로 배포 Helm Chat의 values.template을 업데이트해 주기로 하였습니다.<br>
 ```bash
 # buildspec,yaml 파일으 28 ~ 32번째 줄...
 ...
@@ -307,19 +307,19 @@ echo $ARGO_PWD
 ![FlightSpecials Database Info](./docs/assets/flightspecials-database-info.png)
 
 이렇게 설정된 값은 다음과 같은 경로로 전파됩니다.<br>
-> values.yaml -> deployment.yaml -> 컨테이너의 환경 변수 -> 어플리케이션의 applications.yaml 파일에서 Replace되어 Property Value 처리 로직에 따라 해석됨
+> values.yaml -> deployment.yaml -> 컨테이너의 환경 변수 -> 어플리케이션의 applications.yaml 파일에서 Replace되어 Property Value 처리 로직에 따라 해석됨 
 
 8. Secrets Manager 및 Parameter Store 의존성 설정<br>
-   아래와 같이 Secrets Manager 및 Parameter Store의 의존성을 설정해 줍니다.<br>
-   ![FlightSpecials](./docs/assets/flightspecials-spring-cloud-aws-dependency.png)
+아래와 같이 Secrets Manager 및 Parameter Store의 의존성을 설정해 줍니다.<br>
+![FlightSpecials](./docs/assets/flightspecials-spring-cloud-aws-dependency.png)
 
 9. (옵션) Secrets Manager 및 Parameter Store 권한 설정<br>
-   IRSA (IAM Role for Service Account) 혹은 Node Role에 아래와 같이 권한을 지정해 줍니다.<br>
-   ![FlightSpecials Node Role](./docs/assets/flightspecials-node-role.png)
+IRSA (IAM Role for Service Account) 혹은 Node Role에 아래와 같이 권한을 지정해 줍니다.<br>
+![FlightSpecials Node Role](./docs/assets/flightspecials-node-role.png)
 
 10. (옵션) PostgreSQL 데이터베이스 확인<br>
 
-FlightSpecials 어플리케이션은 최초 기동 시에 데이터베이스 스키마를 설정하고 샘플 데이터를 주입하도록 설정되어 있습니다 (via Flyway). 하지만 이 과정이 실패할 경우 아래와 같이 PostgreSQL 클라이언트를 (서버에 포함) 설치하고 Troubleshooting해 볼 수 있습니다.<br>
+FlightSpecials 어플리케이션은 최초 기동 시에 데이터베이스 스키마를 설정하고 샘플 데이터를 주입하도록 설정되어 있습니다 (via Flyway). 하지만 이 과정이 실패할 경우 아래와 같이 PostgreSQL 클라이언트를 (서버에 포함) 설치하고 Troubleshooting해 볼 수 있습니다.<br> 
 ```bash
 sudo yum update -y
 sudo amazon-linux-extras enable postgresql14
@@ -330,7 +330,7 @@ psql -h 서버주소 -U 아이디 데이터베이스명
 ```
 
 11. 분리된 FlightSpecials 마이크로서비스가 동작하는 것을 확인합니다.<br>
-    ![FlightSpecials in Action](./docs/assets/flightspecials-microservice-in-action.png)
+![FlightSpecials in Action](./docs/assets/flightspecials-microservice-in-action.png)
 
 
 우리는 TravelBuddy 실습 중에 생성한 ALB가 공유됨을 주목할 필요가 있습니다.<br>
@@ -341,13 +341,13 @@ psql -h 서버주소 -U 아이디 데이터베이스명
 
 하지만 현재 배포된 FlightSpecials 백엔드 기능은 각 FlightSpecials 항목의 이름을 수정하는 기능이 누락된 것이 발견되었습니다.
 
-FlightSpecials 마이크로서비스의 PO (Product Owner)는 Progressive Delivery & Deploy를 적용하기 위하여 Argo Rollouts을 적용해 보고 싶어합니다.
+FlightSpecials 마이크로서비스의 PO (Product Owner)는 Progressive Delivery & Deploy를 적용하기 위하여 Argo Rollouts을 적용해 보고 싶어합니다. 
 
 앞서 CDK로 배포한 자원에는 이미 Argo Rollouts 컨트롤러가 설치되어 있습니다.<br>
 이를 활용하여 FlightSpecials에 대한 Canary 배포를 적용해 보기로 하겠습니다.<br>
 
 1. (옵션) Argo Rollouts Dashboard 사용을 위해 Plugin 설치<br>
-   우리는 이미 대시보드를 설치해 두었으므로 아래 Kubectl Plugin은 옵션으로 설치합니다.<br>
+우리는 이미 대시보드를 설치해 두었으므로 아래 Kubectl Plugin은 옵션으로 설치합니다.<br>
  ```bash
  curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
  chmod +x ./kubectl-argo-rollouts-linux-amd64
@@ -361,16 +361,23 @@ kubectl get services argo-rollouts-dashboard -n argo-rollouts -o=jsonpath={.stat
 ```
 
 3. 위에서 확인한 ```http://<Argo Rollouts Dashboard URL>:3100```으로 접속해 봅니다.<br>
-   ![Argo Rollouts Dashboard](./docs/assets/argo-rollouts-dashboard.png)
+![Argo Rollouts Dashboard](./docs/assets/argo-rollouts-dashboard.png)
 
 4. 해당 기능이 구현된 소스를 다운받습니다. 이 기능은 강사에 의해 미리 구현되어 원본 Github Repository의```feature/update-header``` 브랜치에 올라가 있습니다.
 
 ```bash
+# 브랜치 생성
+git checkout -b feature/update-header
+
 # 원본 Github 리포지터리에서 구현 사항 다운로드
+# 혹시 머지 충돌 (Merge Conflict)가 발생하면 이를 해소합니다.
 git pull origin feature/update-header
 
 git commit -am "feature/update-header"
-git push --set-upstream ccorigin main
+git push --set-upstream ccorigin feature/update-header
+
+# AWS CodeCommit 콘솔 화면에서 Pull Request를 생성하고 이를 ```main``` 브랜치에 병합합니다.
+# 참고: https://catalog.workshops.aws/cicdonaws/ko-KR/lab02/6-create-pull-request
 ```
 
 4. 배포 리포지터리의 Deployment 파일을 아래와 같이 변경하고 Rollouts 객체가 정상적으로 동작하는지 확인합니다.<br>
@@ -453,5 +460,5 @@ spec:
 ```
 
 5. 어플리케이션을 신규 배포하면서 Canary 배포가 동작함을 확인합니다.<br>
-   ![FlightSpecials in Canary Deployment](./docs/assets/argo-rollouts-flightspecials-steps.png)
-   ![FlightSpecials in Canary Deployment](./docs/assets/argo-rollouts-flightspecials.png)
+![FlightSpecials in Canary Deployment](./docs/assets/argo-rollouts-flightspecials-steps.png)
+![FlightSpecials in Canary Deployment](./docs/assets/argo-rollouts-flightspecials.png)
