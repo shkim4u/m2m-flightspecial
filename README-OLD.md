@@ -141,11 +141,18 @@ cd m2m-flightspecial-helm
 export HELM_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name M2M-FlightSpecialCICDStack-DeployStack-DeploySourceRepository --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
 echo $HELM_CODECOMMIT_URL
 
-# CodeCommit 배포 리포지터리(ccorigin으로 명명)와 연결
-git remote add ccorigin $HELM_CODECOMMIT_URL
+# Git 초기화
+rm -rf .git
+git init
+
+# CodeCommit 배포 리포지터리와 연결
+git branch -M main
+git remote add origin $HELM_CODECOMMIT_URL
 
 # 배포 리포지터리에 푸시
-git push --set-upstream ccorigin main
+git add .
+git commit -am "Firs commit."
+git push --set-upstream origin main
 ```
 
 ## 3. 빌드 파이프라인 연동
@@ -167,14 +174,21 @@ cd m2m-flightspecial
 export APP_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name M2M-FlightSpecialCICDStack-SourceRepository --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
 echo $APP_CODECOMMIT_URL
 
+# Git 초기화
+rm -rf .git
+git init
+
 # CodeCommit 소스 리포지터리와 연결
-git remote add ccorigin $APP_CODECOMMIT_URL
+git branch -M main
+git remote add origin $APP_CODECOMMIT_URL
 
 # (예시)
 # git remote add origin https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpecialCICDStack-SourceRepository
 
 # 소스 리포지터리에 푸시
-git push --set-upstream ccorigin main
+git add .
+git commit -am "First commit."
+ git push --set-upstream origin main
 ```
 
 4. 빌드 파이프라인이 성공적으로 수행되는지 확인합니다.<br>
