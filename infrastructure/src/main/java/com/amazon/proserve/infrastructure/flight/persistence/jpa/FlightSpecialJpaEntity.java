@@ -31,7 +31,7 @@ public class FlightSpecialJpaEntity {
         @Id
         @Column(name = "id", nullable = false)
         @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private Integer id;
+        private Long id;
 
         @Column(name = "header", nullable = false)
         private String header;
@@ -59,7 +59,7 @@ public class FlightSpecialJpaEntity {
 
         public static FlightSpecialJpaEntity fromDomainEntity(FlightSpecial domainEntity) {
                 return FlightSpecialJpaEntity.builder()
-                                .id(domainEntity.getId().getValue())
+                                .id(Long.valueOf(domainEntity.getId().getValue()))
                                 .header(domainEntity.getHeader().getValue())
                                 .body(domainEntity.getBody() != null ? domainEntity.getBody().getValue() : "")
                                 .origin(domainEntity.getOrigin() != null ? domainEntity.getOrigin().getValue() : "")
