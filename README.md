@@ -156,6 +156,7 @@ git push --set-upstream ccorigin main
 ```bash
 cd ~/environment
 git clone https://github.com/shkim4u/m2m-flightspecial.git
+cd m2m-flightspecial
 ```
 2. 빌드 파이프라인 소스 리포지터리의 URL을 확인합니다.<br>
    ![FlightSpecial 소스 리포 URL](./docs/assets/flightspecial-codecommit-repo-url.png)
@@ -172,7 +173,7 @@ git remote add ccorigin $APP_CODECOMMIT_URL
 # git remote add origin https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpecialCICDStack-SourceRepository
 
 # 소스 리포지터리에 푸시
- git push --set-upstream ccorigin main
+git push --set-upstream ccorigin main
 ```
 
 4. 빌드 파이프라인이 성공적으로 수행되는지 확인합니다.<br>
@@ -187,8 +188,8 @@ CDK를 통해서 이미 배포한 EKS 클러스터에는 ArgCD가 설치되어 �
 
 ```bash
 # ArgoCD 접속 주소 확인
-export ARGOCD_SERVER=`kubectl get svc argocd-server -n argocd -o json | jq --raw-output .status.loadBalancer.ingress[0].hostname`
-echo $ARGOCD_SERVER
+export ARGOCD_SERVER=`kubectl get ingress/argocd-server -n argocd -o json | jq --raw-output .status.loadBalancer.ingress[0].hostname`
+echo https://${ARGOCD_SERVER}
 
 # ArgoCD의 기본 사용자 (admin) 패스워드 확인
 ARGO_PWD=`kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d`
@@ -330,6 +331,14 @@ psql -h 서버주소 -U 아이디 데이터베이스명
 ```
 
 11. 분리된 FlightSpecials 마이크로서비스가 동작하는 것을 확인합니다.<br>
+
+```bash
+export API_URL=http://$(kubectl get ingress/travelbuddy-ingress -n travelbuddy -o jsonpath='{.status.loadBalancer.ingress[*].hostname}')
+echo ${API_URL}/flightspecials/
+
+curl ${API_URL}/flightspecials/
+```
+
 ![FlightSpecials in Action](./docs/assets/flightspecials-microservice-in-action.png)
 
 
@@ -340,6 +349,23 @@ psql -h 서버주소 -U 아이디 데이터베이스명
 우리는 TravelBuddy Monolith 어플리케이션으로부터 FlightSpecials 서비스의 백엔드 기능을 API로 분리하고 이를 ArgoCD를 활용한 GitOps 체계로 배포할 수 있었습니다.
 
 하지만 현재 배포된 FlightSpecials 백엔드 기능은 각 FlightSpecials 항목의 이름을 수정하는 기능이 누락된 것이 발견되었습니다.
+
+다음과 같이 특정 FlightSpecials 항목의 헤더를 업데이트하는 REST API가 404로 반환됨을 확인합니다.
+
+```bash
+export API_URL=http://$(kubectl get ingress/travelbuddy-ingress -n travelbuddy -o jsonpath='{.status.loadBalancer.ingress[*].hostname}')
+echo $API_URL/flightspecials/1/header
+
+curl --location ${API_URL}/flightspecials/1/header \
+--header 'Content-Type: application/json' \
+--data '{
+    "id": 1,
+    "flightSpecialHeader": "London to Seoul"
+}'
+```
+
+![FlightSpeicials Header Update Missing](./docs/assets/flightspecials-update-header-missing.png)
+
 
 FlightSpecials 마이크로서비스의 PO (Product Owner)는 Progressive Delivery & Deploy를 적용하기 위하여 Argo Rollouts을 적용해 보고 싶어합니다. 
 
@@ -357,34 +383,48 @@ FlightSpecials 마이크로서비스의 PO (Product Owner)는 Progressive Delive
 
 2. Argo Rollouts 대시보드 확인<br>
 ```bash
-kubectl get services argo-rollouts-dashboard -n argo-rollouts -o=jsonpath={.status.loadBalancer.ingress[0].hostname} | awk '{print $1}'
+# Argo Rollouts 접속 주소 확인
+export ARGO_ROLLOUTS_DASHBOARD_URL=`kubectl get ingress/argo-rollouts-dashboard -n argo-rollouts -o json | jq --raw-output .status.loadBalancer.ingress[0].hostname`
+echo http://${ARGO_ROLLOUTS_DASHBOARD_URL}
 ```
 
-3. 위에서 확인한 ```http://<Argo Rollouts Dashboard URL>:3100```으로 접속해 봅니다.<br>
+3. 위에서 확인한 ```http://<Argo Rollouts Dashboard URL>```으로 접속해 봅니다.<br>
+> (참고)
+> Argo Rollouts의 기본 포트는 3100이지만, CDK로 Addon으로 배포된 Ingress는 80으로 설정되었습니다.
+
 ![Argo Rollouts Dashboard](./docs/assets/argo-rollouts-dashboard.png)
 
-4. 해당 기능이 구현된 소스를 다운받습니다. 이 기능은 강사에 의해 미리 구현되어 원본 Github Repository의```feature/update-header``` 브랜치에 올라가 있습니다.
+4. 해당 기능이 구현된 소스를 ```main``` 브랜치에 병합합니다. 이 기능은 강사에 의해 미리 구현되어 원본 Github Repository의```feature/update-header``` 브랜치에 올라가 있습니다.
 
 ```bash
-# 브랜치 생성
-git checkout -b feature/update-header
+# 브랜치 전환
+git switch feature/update-header
 
-# 원본 Github 리포지터리에서 구현 사항 다운로드
-# 혹시 머지 충돌 (Merge Conflict)가 발생하면 이를 해소합니다.
-git pull origin feature/update-header
-
-git commit -am "feature/update-header"
+# CodeCommit 리모트 리포지터리에 해당 브랜치 푸시
 git push --set-upstream ccorigin feature/update-header
 
 # AWS CodeCommit 콘솔 화면에서 Pull Request를 생성하고 이를 ```main``` 브랜치에 병합합니다.
 # 참고: https://catalog.workshops.aws/cicdonaws/ko-KR/lab02/6-create-pull-request
 ```
 
-4. 배포 리포지터리의 Deployment 파일을 아래와 같이 변경하고 Rollouts 객체가 정상적으로 동작하는지 확인합니다.<br>
+![Create Pull Request](./docs/assets/create-pull-request-01.png)
+
+
+5. 배포 리포지터리의 Deployment 파일을 아래와 같이 변경하고 Rollouts 객체가 정상적으로 동작하는지 확인합니다.<br>
 ```bash
-# deployment.yaml
+# 빌드 파이프라인인 배포 파일을 변경하였으므로 먼저 변경 사항을 Pull합니다.
+cd ~/environment/m2m-flightspecial-helm
+git pull
+
+# Cloud9 CLI로 deployment.yaml 파일을 엽니다.
+c9 open templates/deployment.yaml
+```
+
+위에서 열린 Deployment 매니페스트의 내용 전체를 아래 Argo Rollouts 매니페스트 파일로 변경합니다.
+
+```yaml
 apiVersion: argoproj.io/v1alpha1
-*kind: Rollout
+kind: Rollout
 metadata:
   namespace: {{ .Values.namespace.name }}
   name: {{ .Values.deployment.name }}
@@ -447,18 +487,71 @@ spec:
     canary:
       maxSurge: "50%"    # canary 배포로 생성할 pod의 비율*/
       maxUnavailable: 0  # 업데이트 될 때 사용할 수 없는 pod의 최대 수*/
-      steps:*/}}
-        - setWeight: 20*/}}
-        - pause: {duration: 30s}*/}}
-        - setWeight: 40*/}}
-        - pause: {duration: 30s}*/}}
-        - setWeight: 60*/}}
-        - pause: {duration: 30s}*/}}
-        - setWeight: 80*/}}
-        - pause: {duration: 20s}*/}}
-  revisionHistoryLimit: 2*/}}
+      steps:
+        - setWeight: 20
+        - pause: {duration: 30s}
+        - setWeight: 40
+        - pause: {duration: 30s}
+        - setWeight: 60
+        - pause: {duration: 30s}
+        - setWeight: 80
+        - pause: {duration: 20s}
+  revisionHistoryLimit: 2
 ```
 
-5. 어플리케이션을 신규 배포하면서 Canary 배포가 동작함을 확인합니다.<br>
+Helm 배포 리포지터리에 푸시합니다.<br>
+```bash
+git commit -am "Argo Rollouts Applied"
+git push
+```
+
+6. 어플리케이션을 신규 배포하면서 Canary 배포가 동작함을 확인합니다.<br>
+
+```FlightSpecials``` CodeCommit 리포지터리에서 Pull Request를 생성하고 ```main``` 브랜치에 병합합니다.<br>
+![Create Pull Request](./docs/assets/create-pull-request-01.png)
+![Merge Pull Request](./docs/assets/merge-pull-request.png)
+![Merge Pull Request 2](./docs/assets/merge-pull-request2.png)
+
+Pull Request가 ```main``` 브랜치에 병합되면, 빌드 파이프라인이 자동으로 실행됩니다.<br>
+
+![Pull Request Pipeline](./docs/assets/pull-request-pipeline.png)
+
+
+ArgoCD 화면에서 Application을 동기화합니다.<br>
+![ArgoCD Sync App](./docs/assets/argocd-sync-app.png)
+
+
+
 ![FlightSpecials in Canary Deployment](./docs/assets/argo-rollouts-flightspecials-steps.png)
 ![FlightSpecials in Canary Deployment](./docs/assets/argo-rollouts-flightspecials.png)
+
+
+7. FlightSpecials 헤더 업데이트 기능이 정상 작동하는지 확인합니다.<br>
+
+> (참고)<br>
+> Argo Rollouts에 의해 신규 마이크로서비스가 배포된 후에도 여전히 기존의 마이크로서비스 Pod가 Running 중일 수 있습니다.<br>
+> 이는 Argo Rollouts 매니페스트에 ```revisionHistoryLimit: 2```로 설정되어 있기 때문입니다.<br>
+> 아래와 같이 Application을 동기화할 때 ```Prune``` 옵션을 선택하고 동기화하면 Git 형상에 존재하지 않는 Deployment를 삭제하면서 Argo Rollouts으로 전환할 수 있습니다.
+
+![ArgoCD Synd App with Prune](./docs/assets/argocd-sync-app-with-prune.png)
+
+```bash
+export API_URL=http://$(kubectl get ingress/travelbuddy-ingress -n travelbuddy -o jsonpath='{.status.loadBalancer.ingress[*].hostname}')
+echo $API_URL/flightspecials/1/header
+
+curl --location ${API_URL}/flightspecials/1/header \
+--header 'Content-Type: application/json' \
+--data '{
+    "id": 1,
+    "flightSpecialHeader": "London to Seoul"
+}'
+```
+![Successful FlightSpecials Update Header](./docs/assets/successful-update-header.png)
+
+
+
+
+## 7. 데이터 동기화<br>
+우리는 FlightSpecials 마이크로서비스를 모놀리스로부터 분리한 후 성공적으로 동작하는 것을 확인하였습니다. 그리고 해당 마이크로서비스의 배포에 점진적 전달을 적용하기 위하여 Argo Rollouts을 적용하였습니다.
+
+하지만 마이크로서비스 전환은 대개의 경우 기존의 모놀리스 기능과 병행하면서 점진적으로 이루지므로, 마이크로서비스에서 생성되는 데이터가 기존의 모놀리스 환경으로 동기화되어야 할 수도 있습니다.
