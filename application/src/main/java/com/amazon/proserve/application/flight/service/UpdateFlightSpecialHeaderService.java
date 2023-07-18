@@ -1,6 +1,7 @@
 package com.amazon.proserve.application.flight.service;
 
 import com.amazon.proserve.application.flight.command.UpdateFlightSpecialHeaderCommand;
+import com.amazon.proserve.application.flight.service.outboundservice.FlightSpecialHeaderUpdatePublisher;
 import com.amazon.proserve.application.flight.usecase.UpdateFlightSpecialHeaderUseCase;
 import com.amazon.proserve.domain.flight.FlightSpecial;
 import com.amazon.proserve.domain.flight.repository.FlightSpecialRepository;
@@ -12,11 +13,13 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class UpdateFlightSpecialHeaderService implements UpdateFlightSpecialHeaderUseCase {
     private final FlightSpecialRepository repository;
+    private final FlightSpecialHeaderUpdatePublisher flightSpecialHeaderUpdatePublisher;
 
     @Override
     public void updateFlightSpecialHeader(UpdateFlightSpecialHeaderCommand command) {
         FlightSpecial flightSpecial = repository.findById(Id.of(Long.valueOf(command.getId())));
         flightSpecial.updateFlightSpecialsHeader(command.getNewFlightSpecialsHeader());
         repository.save(flightSpecial);
+        flightSpecialHeaderUpdatePublisher.publish(flightSpecial.getId());
     }
 }

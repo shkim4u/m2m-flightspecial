@@ -62,5 +62,6 @@ public class FlightSpecial {
         Header oldHeader = this.header;
         Header newHeader = Header.of(newFlightSpecialsHeader);
         this.header = newHeader;
+        // Pattern: DDD를 적용할 경우 여기서 AbstractAggregateRoot.registerEvent(new DomainEvent())를 호출해 준다.
     }
 }

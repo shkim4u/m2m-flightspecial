@@ -72,6 +72,17 @@ spring:
     enabled: false
     validate-migration-naming: true
     locations: classpath:db/migration/common, classpath:db/migration/sample
+  kafka:
+    bootstrap-servers: localhost:9092
+  cloud:
+    stream:
+      kafka:
+        binder:
+          auto-create-topics: true
+      bindings:
+        flightspecial-update-header-in-0:
+          destination: flightspecial-update-header
+          content-type: application/json
 ---
 spring:
   config:
@@ -104,6 +115,18 @@ spring:
     enabled: true
     validate-migration-naming: true
     locations: classpath:db/migration/common, classpath:db/migration/sample
+  kafka:
+    # [중요] 아래 항목을 반드시 자신의 환경에 맞는 정보로 수정하여야 합니다.
+    bootstrap-servers: b-4.m2mmskstackmskclu.fd1ma2.c4.kafka.ap-northeast-2.amazonaws.com:9098,b-3.m2mmskstackmskclu.fd1ma2.c4.kafka.ap-northeast-2.amazonaws.com:9098,b-1.m2mmskstackmskclu.fd1ma2.c4.kafka.ap-northeast-2.amazonaws.com:9098
+  cloud:
+    stream:
+      kafka:
+        binder:
+          auto-create-topics: true
+      bindings:
+        flightspecial-update-header-in-0:
+          destination: flightspecial-update-header
+          content-type: application/json
 logging:
   level:
     root: INFO

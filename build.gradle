@@ -64,6 +64,7 @@ project(':domain') {
 project(':application') {
     dependencies {
         implementation project(':domain')
+        implementation 'org.springframework.cloud:spring-cloud-stream-binder-kafka:3.2.4'
     }
 }
 
@@ -87,6 +88,7 @@ project(':infrastructure') {
 
         // https://mvnrepository.com/artifact/org.gradle/api
 //        implementation group: 'org.gradle', name: 'api', version: '1.0'
+
         implementation gradleApi()
     }
 }
