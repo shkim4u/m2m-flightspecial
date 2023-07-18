@@ -9,7 +9,7 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @ToString
 @EqualsAndHashCode
-public class ChangeFlightNameRequest {
+public class UpdateFlightNameRequest {
     private Long flightNo;
     private String flightName;
 }

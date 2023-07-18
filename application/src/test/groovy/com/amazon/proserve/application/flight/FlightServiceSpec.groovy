@@ -1,8 +1,8 @@
 package com.amazon.proserve.application.flight
 
-import com.amazon.proserve.application.flight.command.ChangeFlightNameCommand
-import com.amazon.proserve.application.flight.service.ChangeFlightNameService
-import com.amazon.proserve.application.flight.usecase.ChangeFlightNameUseCase
+import com.amazon.proserve.application.flight.command.UpdateFlightNameCommand
+import com.amazon.proserve.application.flight.service.UpdateFlightNameService
+import com.amazon.proserve.application.flight.usecase.UpdateFlightNameUseCase
 import com.amazon.proserve.domain.flight.Flight
 import com.amazon.proserve.domain.flight.repository.FlightRepository
 import com.amazon.proserve.domain.flight.vo.*
@@ -20,11 +20,11 @@ class FlightServiceSpec extends Specification {
         FlightRepository repository = Mock()
         repository.findByFlightNo(FlightNo.of(1L)) >> flight
 
-        ChangeFlightNameUseCase useCase = new ChangeFlightNameService(repository)
-        ChangeFlightNameCommand command = ChangeFlightNameCommand.of(1L, "Sally")
+        UpdateFlightNameUseCase useCase = new UpdateFlightNameService(repository)
+        UpdateFlightNameCommand command = UpdateFlightNameCommand.of(1L, "Sally")
 
         when:
-        useCase.changeFlightName(command)
+        useCase.updateFlightName(command)
 
         then:
         1 * repository.save(flight)

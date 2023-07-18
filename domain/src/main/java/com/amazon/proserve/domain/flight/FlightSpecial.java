@@ -6,14 +6,7 @@ import java.util.Objects;
 
 import javax.validation.constraints.NotNull;
 
-import com.amazon.proserve.domain.flight.vo.Body;
-import com.amazon.proserve.domain.flight.vo.Cost;
-import com.amazon.proserve.domain.flight.vo.Destination;
-import com.amazon.proserve.domain.flight.vo.DestinationCode;
-import com.amazon.proserve.domain.flight.vo.Header;
-import com.amazon.proserve.domain.flight.vo.Id;
-import com.amazon.proserve.domain.flight.vo.Origin;
-import com.amazon.proserve.domain.flight.vo.OriginCode;
+import com.amazon.proserve.domain.flight.vo.*;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -63,5 +56,11 @@ public class FlightSpecial {
     @Override
     public int hashCode() {
         return Objects.hash(header, body, origin, originCode, destination, destinationCode, cost, expiryDate);
+    }
+
+    public void updateFlightSpecialsHeader(String newFlightSpecialsHeader) {
+        Header oldHeader = this.header;
+        Header newHeader = Header.of(newFlightSpecialsHeader);
+        this.header = newHeader;
     }
 }

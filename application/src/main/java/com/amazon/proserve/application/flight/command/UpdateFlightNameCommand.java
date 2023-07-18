@@ -7,7 +7,7 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.PositiveOrZero;
 
 @Value(staticConstructor = "of")
-public class ChangeFlightNameCommand {
+public class UpdateFlightNameCommand {
     @NotNull
     @PositiveOrZero
     Long flightNo;
