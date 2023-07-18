@@ -564,3 +564,110 @@ curl --location ${API_URL}/flightspecials/1/header \
 ```
 ![Successful FlightSpecials Update Header](./docs/assets/successful-update-header.png)
 
+
+
+
+## 7. 데이터 동기화<br>
+
+> (참고)<br>
+> AWS DMS를 사용한 데이터베이스 복제 워크샵: https://catalog.us-east-1.prod.workshops.aws/workshops/77bdff4f-2d9e-4d68-99ba-248ea95b3aca/en-US/oracle-oracle/data-migration/replication-instance
+
+
+우리는 FlightSpecials 마이크로서비스를 모놀리스로부터 분리한 후 성공적으로 동작하는 것을 확인하였습니다. 그리고 해당 마이크로서비스의 배포에 점진적 전달을 적용하기 위하여 Argo Rollouts을 적용하였습니다.
+
+하지만 마이크로서비스 전환은 대개의 경우 기존의 모놀리스 기능과 병행하면서 점진적으로 이루지므로, 마이크로서비스에서 생성되는 데이터가 기존의 모놀리스 환경으로 동기화되어야 할 수도 있습니다.
+
+### 7.1. DMS 복제 인스턴스 생성<br>
+이름은 ```m2m-flightspecials-sync-dms```로 지정합니다.<br>
+(참고) 아래에서 보안 그룹은 "default"로 지정되고 있는데 실습 자원과 함께 생성된 보안 그룹 (예: Database-Replicaton-Instance-SecurityGroup 이름 포함한 보안 그룹) 
+
+![Create DMS Replication Instance 01](./docs/assets/create-dms-01.png)<br>
+![Create DMS Replication Instance 02](./docs/assets/create-sync-dms-02-configuration.png)<br>
+![Create DMS Replication Instance 03](./docs/assets/create-sync-dms-03-storage-network.png)<br>
+![Create DMS Replication Instance 04](./docs/assets/create-sync-dms-04-creating.png)<br>
+
+
+> (참고)<br>
+> ```The IAM Role arn:aws:iam::957465301138:role/dms-vpc-role is not configured properly.```와 같은 오류 메시지가 표시되는 경우 ```취소```를 클릭하고 위의 단계를 반복하면 됩니다.
+
+### 7.2. DMS 소스 엔드포인트 생성<br>
+
+1. 소스 엔드포인트 생성
+AWS DMS 콘솔 화면의 왼쪽 ```엔드포인트``` 링크를 클릭한 다음 오른쪽 상단의 ```엔드포인트 생성``` 버튼을 클릭합니다.
+![Create DMS Source Endpoint](./docs/assets/create-dms-source-endpoint.png)
+
+2. 다음과 같이 정보를 입력합니다.<br>
+
+![Create DMS Source Endpoint 01](./docs/assets/create-dms-source-endpoint-01.png)<br>
+![Create DMS Source Endpoint 02](./docs/assets/create-dms-source-endpoint-02.png)<br>
+
+[//]: # (| 보안 암호 ID                         | ```aws secretsmanager list-secrets --output json \| jq --raw-output .SecretList[0].ARN``` 을 실행하여 표시되는 값 |)
+[//]: # (aws secretsmanager get-secret-value --secret-id `aws secretsmanager list-secrets --output json | jq --raw-output .SecretList[0].ARN`)
+
+| **파라미터**                         | **값**                                                                                                                                                                                           |
+|----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 엔드포인트                            | 소스 엔드포인트                                                                                                                                                                                        |
+| RDS DB 인스턴스 선택                   | 선택                                                                                                                                                                                              |
+| RDS 인스턴스                         | flightspecials-test-postgres-db                                                                                                                                                                 |
+| 엔드포인트 식별자                        | <자동으로 채워지는 정보 사용>                                                                                                                                                                               |
+| 알기 쉬운 Amazon 리소스 이름(ARN) - 선택 사항 | <비워 둠>                                                                                                                                                                                          |
+| 소스 엔진                            | PostgreSQL                                                                                                                                                                                      |
+| 엔드포인트 데이터베이스에 액세스                | 수동으로 액세스 정보 제공                                                                                                                                                                                  |
+| 서버 이름                            | <자동으로 채워지는 정보 선택>                                                                                                                                                                               |
+| 포트                               | 5432                                                                                                                                                                                            |
+| 사용자 이름                           | postgres                                                                                                                                                                                        |
+| 암호                               | ```aws secretsmanager get-secret-value --secret-id `aws secretsmanager list-secrets --output json \| jq --raw-output .SecretList[0].ARN``` 로 표시되는 데이터 중 "SecretString"의 "password" 값 (강사 안내 참고) |
+| Secure Socket Layer(SSL) 모드      | 없음                                                                                                                                                                                              |
+| 데이터베이스 이름                        | dso                                                                                                                                                                                             |
+
+```엔드포인트 생성``` 버튼을 눌러 엔드포인트를 생성합니다.
+
+엔드포인트 생성 후 다음과 같이 연결 검사에서 실패할 수 있는데, 이 경우에는 Security Group을 먼저 확인해 봅니다.<br>
+![Create DMS Source Endpoint - Testing Connectivity](./docs/assets/create-dms-source-endpoint-testing-connectivity.png)<br>
+
+모든 연결이 정상적으로 테스트되면 아래와 같이 화면이 표시됩니다.<br>
+![Create DMS Source Endpoint Source Test Successful](./docs/assets/create-dms-source-endpoint-test-successful.png)<br>
+
+
+### 7.3. DMS 타겟 엔드포인트 생성<br>
+
+위의 7.2. DMS 소스 엔트포인트 생성과 동일한 방법으로 타겟 엔드포인트를 생성합니다.
+
+1. 타겟 엔드포인트 생성
+   AWS DMS 콘솔 화면의 왼쪽 ```엔드포인트``` 링크를 클릭한 다음 오른쪽 상단의 ```엔드포인트 생성``` 버튼을 클릭합니다.
+   ![Create DMS Source Endpoint](./docs/assets/create-dms-target-endpoint.png)
+
+2. 다음과 같이 정보를 입력합니다.<br>
+
+![Create DMS Target Endpoint 01](./docs/assets/create-dms-target-endpoint-01.png)<br>
+![Create DMS Target Endpoint 02](./docs/assets/create-dms-target-endpoint-02.png)<br>
+
+
+[//]: # (| 보안 암호 ID                         | ```aws secretsmanager list-secrets --output json \| jq --raw-output .SecretList[0].ARN``` 을 실행하여 표시되는 값 |)
+[//]: # (aws secretsmanager get-secret-value --secret-id `aws secretsmanager list-secrets --output json | jq --raw-output .SecretList[0].ARN`)
+
+| **파라미터**                         | **값**                                             |
+|----------------------------------|---------------------------------------------------|
+| 엔드포인트                            | 타겟 엔드포인트                                          |
+| RDS DB 인스턴스 선택                   | 선택                                                |
+| RDS 인스턴스                         | m2m-rdslegacystack-dbinstance-xxx 형식의 RDS 인스턴스 선택 |
+| 엔드포인트 식별자                        | <자동으로 채워지는 정보 사용>                                 |
+| 알기 쉬운 Amazon 리소스 이름(ARN) - 선택 사항 | <비워 둠>                                            |
+| 소스 엔진                            | MySQL                                             |
+| 엔드포인트 데이터베이스에 액세스                | 수동으로 액세스 정보 제공                                    |
+| 서버 이름                            | <자동으로 채워지는 정보 선택>                                 |
+| 포트                               | 3306                                              |
+| 사용자 이름                           | root                                              |
+| 암호                               | ```labpassword```                                       |
+| Secure Socket Layer(SSL) 모드      | 없음                                                |
+| 데이터베이스 이름                        | dso                                               |
+
+```엔드포인트 생성``` 버튼을 눌러 엔드포인트를 생성합니다.
+
+엔드포인트 생성 후 다음과 같이 연결 검사에서 실패할 수 있는데, 이 경우에는 역시 마찬가지로 Security Group을 먼저 확인해 봅니다.<br>
+
+모든 연결이 정상적으로 테스트되면 아래와 같이 화면이 표시됩니다.<br>
+![Create DMS Target Endpoint Source Test Successful](./docs/assets/create-dms-target-endpoint-test-successful.png)<br>
+
+### 7.4. DMS 마이그레이션 태스크 생성
+
