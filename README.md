@@ -108,7 +108,7 @@ sudo yum install -y java-11-amazon-corretto-headless
 
 ```bash
 # 1. Package
-./gradlew clean build
+./gradlew clean build -x test
 
 # 2. Run Application
 ./gradlew :interface:bootRun
@@ -122,6 +122,7 @@ export APP_PORT=8080 # default: 8080
 export DB_VOLUME="db-data" # 컨테이너 볼륨을 사용하는 경우
 
 # 2. 컨테이너 이미지 빌드 및 실행
+./gradlew clean build -x test
 docker-compose build app
 docker-compose up -d app
 
