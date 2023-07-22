@@ -467,7 +467,7 @@ spec:
               memory: "256Mi"
               cpu: "250m"
             limits:
-              memory: "512Gi"
+              memory: "512Mi"
               cpu: "500m"
           env:
             - name: PROFILE
