@@ -14,12 +14,13 @@ Monolith 예제인 TravelBuddy 애플리케이션에서 Flight 부분을 분해�
 - 부록: [API Gateway](./docs/apigw.md)
 - 부록: [CQRS 패턴](./docs/cqrs.md)
 
-## 0. Day 2 자원 배포하기
+## 0. Day 2 자원 배포하기 (Cloud9)
 우리는 이미 네트워크, EKS, 레거시 데이터베이스 (MySQL)과 같은 Day 1 자원을 배포하였고, 여기에서 모놀리스 어플리케이션을 살펴보았습니다.<br>
 
 이번에는 마이크로서비스 분리를 위하여 Day 2 자원을 배포해 보도록 하겠습니다.<br>
+### 0.1. CDK를 사용하는 경우
 ```bash
-cd ~/environment/m2m-travelbuddy/infrastructure
+cd ~/environment/m2m-travelbuddy/infrastructure-cdk
 
 # Private CA ARN을 설정합니다. 이는 ALB 설정에 필요합니다.
 export CA_ARN_QUOTED=`aws acm-pca list-certificate-authorities --query 'CertificateAuthorities[?Status==\`ACTIVE\`].Arn | [0]'`
@@ -29,12 +30,32 @@ echo $CA_ARN
 npm run day2
 ```
 
+### 0.2. 테라폼을 사용하는 경우
+```bash
+# 테라폼 디렉토리로 이동
+cd ~/environment/m2m-travelbuddy/infrastructure-terraform
 
-## 1. 로컬에서 둘러보기 가이드
+# CA_ARN 확인
+export TF_VAR_ca_arn=`terraform output eks_ca_arn | tr -d '"'`
+echo $TF_VAR_ca_arn
+
+
+# terraform apply
+terraform apply -var='exclude_msk=false' -auto-approve
+```
+
+## 1. 로컬에서 둘러보기 (Cloud9)
+
+Cloud9 환경에서 ```FlightSpecials``` 마이크로서비스 소스 코드를 Clone합니다.<br>
+```bash
+cd ~/environment/
+git clone https://github.com/shkim4u/m2m-flightspecial.git
+cd m2m-flightspecial
+```
 
 ### 데이터베이스 실행
 
-1. (optional) 컨테이너 볼륨 준비
+1. (Optional) 컨테이너 볼륨 준비
 
    > 'db'에 컨테이너 볼륨을 사용하고자 한다면 (호스트의 폴더를 마운트하지 않고)
 
@@ -99,22 +120,7 @@ npm run day2
 
 ### SpringBoot 애플리케이션 실행
 
-#### A. 로컬에서 gradle 활용
-
-> (참고) Java가 설치되어 있지 않을 경우 아래와 같이 Java를 설치합니다.
-```bash
-sudo yum install -y java-11-amazon-corretto-headless
-```
-
-```bash
-# 1. Package
-./gradlew clean build -x test
-
-# 2. Run Application
-./gradlew :interface:bootRun
-```
-
-#### B. docker-compose 활용 컨테이너 프로세스로 실행
+#### Option 1. docker-compose 활용 컨테이너 프로세스로 실행
 
 ```bash
 # 1. (Optional) 환경변수
@@ -129,8 +135,27 @@ docker-compose up -d app
 # 3. 컨테이너 로그 확인
 docker-compose logs -t -f --tail=50 app
 
+# 4. FlightSpecials Endpoint 확인
+curl http://localhost:8080/flightspecials/
+
 # 4. 정리
+docker-compose stop app
 docker-compose rm app
+```
+
+#### Option 2. 로컬에서 gradle 활용
+
+> (참고) Java가 설치되어 있지 않을 경우 아래와 같이 Java를 설치합니다.
+```bash
+sudo yum install -y java-11-amazon-corretto-headless
+```
+
+```bash
+# 1. Package
+./gradlew clean build -x test
+
+# 2. Run Application
+./gradlew :interface:bootRun
 ```
 
 #### Clean up
@@ -154,52 +179,86 @@ cd m2m-flightspecial-helm
 ```
 
 2. 위에서 받은 소스를 배포 리포지터리 (CodeCommit)과 연결합니다.<br>
-```bash
-export HELM_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name M2M-FlightSpecialCICDStack-DeployStack-DeploySourceRepository --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
-echo $HELM_CODECOMMIT_URL
+   1. CDK를 통해 자원을 생성하였을 경우
+   ```bash
+   export HELM_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name M2M-FlightSpecialCICDStack-DeployStack-DeploySourceRepository --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
+   echo $HELM_CODECOMMIT_URL
+   
+   # CodeCommit 배포 리포지터리(ccorigin으로 명명)와 연결
+   git remote add ccorigin $HELM_CODECOMMIT_URL
+   
+   # 배포 리포지터리에 푸시
+   git push --set-upstream ccorigin main
+   ```
 
-# CodeCommit 배포 리포지터리(ccorigin으로 명명)와 연결
-git remote add ccorigin $HELM_CODECOMMIT_URL
+   2. 테라폼을 통해 자원을 생성하였을 경우
+   ```bash
+   export HELM_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name flightspecials-configuration --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
+   echo $HELM_CODECOMMIT_URL
+   
+   # CodeCommit 배포 리포지터리(ccorigin으로 명명)와 연결
+   git remote add ccorigin $HELM_CODECOMMIT_URL
+   
+   # 배포 리포지터리에 푸시
+   git push --set-upstream ccorigin main
+   ```
 
-# 배포 리포지터리에 푸시
-git push --set-upstream ccorigin main
-```
 
 ## 3. 빌드 파이프라인 연동
 ![GitOps Pipeline](./docs/assets/gitops_helm.png)
 
-1. 아래와 같이 Cloud9 환경에서 "m2m-flightspecial" 어플리케이션을 클론합니다.<br>
+1. (Skip 가능) 위 과정에서 아래와 같이 Cloud9 환경에서 "m2m-flightspecial" 어플리케이션을 클론합니다.<br>
 
 ```bash
 cd ~/environment
 git clone https://github.com/shkim4u/m2m-flightspecial.git
 cd m2m-flightspecial
 ```
-2. 빌드 파이프라인 소스 리포지터리의 URL을 확인합니다.<br>
+
+2. ~~빌드 파이프라인 소스 리포지터리의 URL을 확인합니다.~~<br>
    ![FlightSpecial 소스 리포 URL](./docs/assets/flightspecial-codecommit-repo-url.png)
 
-3. 위에서 확인한 리포지터리 URL과 현재 소스 코드를 연결합니다.<br>
-```bash
-# AWS CLI를 통해서도 HTTPS URL을 바로 확인할 수 있습니다.
-export APP_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name M2M-FlightSpecialCICDStack-SourceRepository --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
-echo $APP_CODECOMMIT_URL
-
-# CodeCommit 소스 리포지터리(ccorigin으로 명명)와 연결
-git remote add ccorigin $APP_CODECOMMIT_URL
-# (예시)
-# git remote add origin https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpecialCICDStack-SourceRepository
-
-# 소스 리포지터리에 푸시
-git push --set-upstream ccorigin main
-```
+3. 소스 리포지터리를 현재 소스 코드와 연결합니다.<br>
+   1. CDK를 사용하였을 경우<br>
+   ```bash
+   cd ~/environment/m2m-flightspecial
+   
+   # AWS CLI를 통해서도 HTTPS URL을 바로 확인할 수 있습니다.
+   export APP_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name M2M-FlightSpecialCICDStack-SourceRepository --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
+   echo $APP_CODECOMMIT_URL
+   
+   # CodeCommit 소스 리포지터리(ccorigin으로 명명)와 연결
+   git remote add ccorigin $APP_CODECOMMIT_URL
+   
+   # 소스 리포지터리에 푸시
+   git push --set-upstream ccorigin main
+   ```
+   2. 테라폼을 사용하였을 경우<br>
+   ```bash
+   cd ~/environment/m2m-flightspecial
+   
+   # AWS CLI를 통해서도 HTTPS URL을 바로 확인할 수 있습니다.
+   export APP_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name flightspecials-application --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
+   echo $APP_CODECOMMIT_URL
+   
+   # CodeCommit 소스 리포지터리(ccorigin으로 명명)와 연결
+   git remote add ccorigin $APP_CODECOMMIT_URL
+   
+   # 소스 리포지터리에 푸시
+   git push --set-upstream ccorigin main
+   ```
 
 4. 빌드 파이프라인이 성공적으로 수행되는지 확인합니다.<br>
-   ![Build Pipeline Success](./docs/assets/flightspecial-build-pipeline-success.png)
+   (CDK를 사용하였을 경우)<br>
+   ![Build Pipeline Success (CDK)](./docs/assets/flightspecial-build-pipeline-success.png) <br>
+   (혹은 테라폼을 사용하였을 경우)<br>
+   ![Build Pipeline Success (Terraform)](./docs/assets/flightspecial-build-pipeline-fail-terraform.png) <br>
 
+<u>***(오류 해결) 만약 파이프라인에서 오류가 발생하면 오류 로그를 살펴본 후 이를 해결해 봅니다.***</u><br>
 
 ## 4. ArgoCD 설정
 1. ArgoCD 접속에 필요한 정보 확인 및 접속<br>
-CDK를 통해서 이미 배포한 EKS 클러스터에는 ArgCD가 설치되어 있으며, 또한 AWS ELB (Elastic Load Balancer)를 통하여 외부에서 접속할 수 있습니다.<br>
+CDK나 테라폼을 통해서 이미 배포한 EKS 클러스터에는 ArgCD가 설치되어 있으며, 또한 AWS ELB (Elastic Load Balancer)를 통하여 외부에서 접속할 수 있습니다.<br>
 
 아래와 같이 접속에 필요한 URL과 ```admin``` 암호를 확인합니다.<br>
 
@@ -216,7 +275,20 @@ echo $ARGO_PWD
 확인한 접속 주소와 패스워드를 사용하여 ArgoCD Web UI에 접속해 봅니다.<br>
 ![ArgoCD UI](./docs/assets/argocd_login.png)
 
-2. ArgoCD가 빌드 리포지터리에 접속할 수 있도록 IAM 사용자 및 Git Credentials을 생성합니다.<br>
+2. ArgoCD가 빌드 리포지터리에 접속할 수 있도록 IAM 사용자 및 Git Credentials을 생성합니다 (CLI 사용).<br>
+```bash
+# IAM User 생성
+aws iam create-user --user-name argocd 
+
+# AWSCodeCommitPowerUser 관리형 권한 정책 연결 (arn:aws:iam::aws:policy/AWSCodeCommitPowerUser)
+aws iam attach-user-policy --user-name argocd --policy-arn arn:aws:iam::aws:policy/AWSCodeCommitPowerUser
+
+# CodeCommit 접근을 위한 Specific Credential 생성
+# (중요) 결과로서 반환되는 "ServiceUserName"과 "ServicePassword"를 기록해 둡니다.
+aws iam create-service-specific-credential --user-name argocd --service-name codecommit.amazonaws.com
+```
+
+3. 혹은 콘솔 화면에서 아래와 같이 수행할 수 있습니다.<br>
    i. ArgoCD 접속 IAM 사용자 생성<br>
    ![ArgoCD IAM 사용자 생성 1](./docs/assets/argocd-iam-user-step1.png)<br>
    ii. IAM 사용자 권한 지정 - CodeCommit Power User <br>
@@ -230,17 +302,26 @@ echo $ARGO_PWD
    vi. IAM 사용자 Git Credential 메모<br>
    ![ArgoCD IAM 사용자 생성 6](./docs/assets/argocd-iam-user-git-credentials-memo.png)<br>
 
-3. ArgoCD 설정<br>
+4. ArgoCD 설정<br>
 - 로그인 이후 좌측의 Settings 를 클릭한 뒤 Repositories 항목을 클릭합니다.<br>
 ![ArgoCD Repository Settings](./docs/assets/argo-setting.png)
 
 - Connect Repo 버튼을 클릭하고 Method는 ```VIA HTTPS```, Project는 ```default```를 입력합니다.<br>
 
-- Repository URL에는 앞서 확인한 배포 CodeCommit Repository의 HTTPS 주소 (예: To ```https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpecialCICDStack-DeployStack-DeploySourceRepository```
-), Username 및 Password는 메모해 둔 정보를 입력합니다.<br>
+- Repository URL에는 앞서 확인한 배포 CodeCommit Repository의 HTTPS 주소와 Username 및 Password는 메모해 둔 정보를 입력합니다.<br>
+  (CDK 사용 시)
+   ```bash
+   export HELM_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name M2M-FlightSpecialCICDStack-DeployStack-DeploySourceRepository --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
+   echo $HELM_CODECOMMIT_URL
+   ```
+  (테라폼 사용 시)
+   ```bash
+   export HELM_CODECOMMIT_URL=$(aws codecommit get-repository --repository-name flightspecials-configuration --region ap-northeast-2 | grep -o '"cloneUrlHttp": "[^"]*'|grep -o '[^"]*$')
+   echo $HELM_CODECOMMIT_URL
+   ```
 ![ArgoCD Repository Connect](./docs/assets/argocd-repository-information.png)
 
-- Application 텝에서 NewApp버튼을 클릭합니다. Application Name 에는 ```flightspecials```를, Project는 default를 입력합니다. Sync Policy에는 "Manual"을, Repository URL에는 앞서 설정한 배포 리포지터리를, PATH에는 ```.```을 각각 입력합니다. Destination 섹션의 Cluster URL에는 ```https://kubernetes.default.svc```, Namespace에는 ```flightspecials```를 입력하고 상단의 Create를 클릭합니다.<br>
+- Application 텝에서 NewApp버튼을 클릭합니다. Application Name 에는 ```flightspecials```를, Project는 ```default```를 입력합니다. Sync Policy에는 "Manual"을, Repository URL에는 앞서 설정한 배포 리포지터리를, PATH에는 ```.```을 각각 입력합니다. Destination 섹션의 Cluster URL에는 ```https://kubernetes.default.svc```, Namespace에는 ```flightspecials```를 입력하고 상단의 Create를 클릭합니다.<br>
 ![ArgoCD FlightSpecials App](./docs/assets/argcd-app-flightspecials.png)
 
 ## 5. ArgoCD 배포 상태 확인<br>
@@ -386,28 +467,28 @@ curl --location ${API_URL}/flightspecials/1/header \
 
 FlightSpecials 마이크로서비스의 PO (Product Owner)는 Progressive Delivery & Deploy를 적용하기 위하여 Argo Rollouts을 적용해 보고 싶어합니다. 
 
-앞서 CDK로 배포한 자원에는 이미 Argo Rollouts 컨트롤러가 설치되어 있습니다.<br>
+앞서 CDK 혹은 테라폼으로 배포한 자원에는 이미 Argo Rollouts 컨트롤러가 설치되어 있습니다.<br>
 이를 활용하여 FlightSpecials에 대한 Canary 배포를 적용해 보기로 하겠습니다.<br>
 
 1. (옵션) Argo Rollouts Dashboard 사용을 위해 Plugin 설치<br>
 우리는 이미 대시보드를 설치해 두었으므로 아래 Kubectl Plugin은 옵션으로 설치합니다.<br>
- ```bash
- curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
- chmod +x ./kubectl-argo-rollouts-linux-amd64
- sudo mv ./kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
- kubectl argo rollouts version
- ```
+```bash
+curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
+chmod +x ./kubectl-argo-rollouts-linux-amd64
+sudo mv ./kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
+kubectl argo rollouts version
+```
 
 2. Argo Rollouts 대시보드 확인<br>
 ```bash
 # Argo Rollouts 접속 주소 확인
 export ARGO_ROLLOUTS_DASHBOARD_URL=`kubectl get ingress/argo-rollouts-dashboard -n argo-rollouts -o json | jq --raw-output .status.loadBalancer.ingress[0].hostname`
-echo http://${ARGO_ROLLOUTS_DASHBOARD_URL}
+echo http://${ARGO_ROLLOUTS_DASHBOARD_URL}/rollouts 
 ```
 
 3. 위에서 확인한 ```http://<Argo Rollouts Dashboard URL>```으로 접속해 봅니다.<br>
 > (참고)
-> Argo Rollouts의 기본 포트는 3100이지만, CDK로 Addon으로 배포된 Ingress는 80으로 설정되었습니다.
+> Argo Rollouts의 기본 포트는 3100이지만, CDK 혹은 테라폼 Addon으로 배포된 Ingress는 80으로 설정되었습니다.
 
 ![Argo Rollouts Dashboard](./docs/assets/argo-rollouts-dashboard.png)
 
@@ -441,7 +522,7 @@ spec:
     spec:
       serviceAccountName: flightspecials-service-account
       containers:
-        - image: "{{ .Values.image.repository }}:{{ .Values.image.tag | replace ":" "" }}"
+        - image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           name: {{ .Values.app.name }}
           imagePullPolicy: Always
           ports:
@@ -506,21 +587,30 @@ git commit -am "Argo Rollouts Applied"
 git push
 ```
 
-5. 해당 기능이 구현된 소스를 ```main``` 브랜치에 병합합니다. 이 기능은 강사에 의해 미리 구현되어 원본 Github Repository의```feature/update-header``` 브랜치에 올라가 있습니다.
+5. ```FlightSpecials``` 어플리케이션에서 해당 기능이 구현된 소스를 ```main``` 브랜치에 병합합니다. 이 기능은 강사에 의해 미리 구현되어 원본 Github Repository의```feature/update-header``` 브랜치에 올라가 있습니다.
 
 ```bash
+cd ~/environment/m2m-flightspecial
+
 # 브랜치 전환
 git switch feature/update-header
 
+# 아래는 기능과 관계없는 변경 사항을 "main" 브랜치로부터 가져옴으로써 Pull Request 시에 Conflict을 줄여줍니다.
+git checkout main -- docs
+git checkout main -- README.md
+
 # CodeCommit 리모트 리포지터리에 해당 브랜치 푸시
+git commit -am "feature/update-header"
 git push --set-upstream ccorigin feature/update-header
 
 # AWS CodeCommit 콘솔 화면에서 Pull Request를 생성하고 이를 ```main``` 브랜치에 병합합니다.
 # 참고: https://catalog.workshops.aws/cicdonaws/ko-KR/lab02/6-create-pull-request
 ```
-
+(CDK로 생성된 경우)<br>
 ![Create Pull Request](./docs/assets/create-pull-request-01.png)
 
+(참고) 테라폼으로 생성된 경우 아래와 같이 리포지터리 이름이 다를 수 있습니다.<br>
+![Create Pull Request](./docs/assets/create-pull-request-terraform-01.png)
 
 6. 어플리케이션을 신규 배포하면서 Canary 배포가 동작함을 확인합니다.<br>
 
@@ -571,16 +661,26 @@ curl --location ${API_URL}/flightspecials/1/header \
 
 우리는 여기에서 한발 더 나아가 FlightSpecial의 헤더가 변경될 때 해당 마이크로서비스 도메인 이벤트를 다른 마이크로서비스로 알리고 싶으며, 이를 위해 아파치 카프카를 사용해 보도록 하겠습니다.
 
-1. ```feature/kafka``` 브랜치 병합
+1. ```feature/kafka``` 브랜치 병합<br>
 기본적인 코드는 이미 ```feature/kafka``` 브랜치에 구현되어 있으며 이 브랜치를 ```main``` 브랜치에 병합하여 일단 배포해 보도록 하겠습니다.
 
 ```bash
 cd ~/environment/m2m-flightspecial
 
+git switch main
+
+# 우선 리모트 리포지터리에 이전 과정에서 Pull Request로 병합된 소스 코드를 가져옵니다.
+git pull
+
 # feature/kafka 브랜치로 전환
 git switch feature/kafka
 
+# 아래는 기능과 관계없는 변경 사항을 "main" 브랜치로부터 가져옴으로써 Pull Request 시에 Conflict을 줄여줍니다.
+git checkout main -- docs
+git checkout main -- README.md
+
 # CodeCommit 리모트 리포지터리에 해당 브랜치 푸시
+git commit -am "feature/kafka"
 git push --set-upstream ccorigin feature/kafka
 
 # AWS CodeCommit 콘솔 화면에서 Pull Request를 생성하고 이를 ```main``` 브랜치에 병합합니다.
@@ -624,7 +724,7 @@ Argo Rollouts 화면에서도 배포 상태를 확인할 수 있습니다.<br>
 ![](./docs/assets/feature-kafka-deploy-status-argo-rollouts.png)
 
 3. 헤더 업데이트 회귀 테스트
-해당 어플리케이션이 배포되면 Update 기능이 정상동작하지 않습니다. 어떻게 Troubleshooting할까요?<br>
+해당 어플리케이션이 배포되면 Update 기능이 정상 동작하지 않습니다. 어떻게 Troubleshooting할까요?<br>
 
 ```bash
 export API_URL=http://$(kubectl get ingress/travelbuddy-ingress -n travelbuddy -o jsonpath='{.status.loadBalancer.ingress[*].hostname}')
@@ -658,7 +758,7 @@ curl --location ${API_URL}/flightspecials/1/header \
 
 ```bash
 export KAFKA_CLUSTER_ARN_QUOTED=`aws kafka list-clusters-v2 --query 'ClusterInfoList[?ClusterName==\`M2M-MskStack-MSK-Cluster\`].ClusterArn | [0]'`
-export KAFKA_CLUSTER_ARN=`echo $MSK_CLUSTER_ARN_QUOTED | tr -d '"'`
+export KAFKA_CLUSTER_ARN=`echo $KAFKA_CLUSTER_ARN_QUOTED | tr -d '"'`
 echo $KAFKA_CLUSTER_ARN
 
 export KAFKA_BOOTSTRAP_SERVERS=`aws kafka get-bootstrap-brokers --cluster-arn ${KAFKA_CLUSTER_ARN} --query BootstrapBrokerStringSaslIam --output=text`
@@ -671,6 +771,8 @@ echo $KAFKA_BOOTSTRAP_SERVERS
 cd ~/environment/m2m-flightspecial
 git switch main
 git pull ccorigin main
+
+c9 open interface/src/main/resources/application.yml
 
 # application.yml 파일의 ```spring.kafka.bootstrap-server``` 항목에 반영
 yq -ie 'select(.spring.config.activate.on-profile == "test") |= .spring.kafka.bootstrap-servers = env(KAFKA_BOOTSTRAP_SERVERS)' interface/src/main/resources/application.yml
@@ -707,7 +809,8 @@ c9 open interface/src/main/resources/application.yml
 ```
 
 ```appplication.yml``` Spring 설정 파일의 ```test``` 프로파일에서 다음과 같이 Kafka Binder 설정을 더해줍니다.
-(관련 라인은 )
+아래에서 ```configuration``` 항목과 부가 속성들을 추가해 줍니다.<br>
+(관련 라인은 125번줄 근방 아래에 추가하면 됩니다.)
 ```yaml
 ...
 cloud:
@@ -855,7 +958,7 @@ JSON 형식으로 전환하고 아래 정책을 정책 편집기에 붙여넣습
 > 혹은 AWS 콘솔에서 Amazon MSK 클러스터의 ARN을 복사하여 ```Resource``` 부분의 첫번째 항목에 전체 붙여넣기 한 후 작업하면 수월합니다.<br>
 > ![](./docs/assets/amazon-msk-arn.png)
 
-이름을 ```pod-msk-permission```으로 지정하고 정책을 생성합니다.<br>
+이름을 ```flightspecials-msk-permission-policy```로 지정하고 정책을 생성합니다.<br>
 ![](./docs/assets/pod-msk-permission.png)
 
 마지막으로 FlightSpecial IAM Role에 생성된 권한 정책을 연결합니다.<br>
