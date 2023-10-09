@@ -385,7 +385,7 @@ curl --location ${API_URL}/flightspecials/1/header \
 
 FlightSpecials 마이크로서비스의 PO (Product Owner)는 Progressive Delivery & Deploy를 적용하기 위하여 Argo Rollouts을 적용해 보고 싶어합니다. 
 
-앞서 CDK로 배포한 자원에는 이미 Argo Rollouts 컨트롤러가 설치되어 있습니다.<br>
+앞서 CDK 혹은 테라폼으로 배포한 자원에는 이미 Argo Rollouts 컨트롤러가 설치되어 있습니다.<br>
 이를 활용하여 FlightSpecials에 대한 Canary 배포를 적용해 보기로 하겠습니다.<br>
 
 1. (옵션) Argo Rollouts Dashboard 사용을 위해 Plugin 설치<br>
@@ -406,7 +406,7 @@ echo http://${ARGO_ROLLOUTS_DASHBOARD_URL}
 
 3. 위에서 확인한 ```http://<Argo Rollouts Dashboard URL>```으로 접속해 봅니다.<br>
 > (참고)
-> Argo Rollouts의 기본 포트는 3100이지만, CDK로 Addon으로 배포된 Ingress는 80으로 설정되었습니다.
+> Argo Rollouts의 기본 포트는 3100이지만, CDK 혹은 테라폼 Addon으로 배포된 Ingress는 80으로 설정되었습니다.
 
 ![Argo Rollouts Dashboard](./docs/assets/argo-rollouts-dashboard.png)
 
