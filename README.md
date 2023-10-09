@@ -595,7 +595,12 @@ cd ~/environment/m2m-flightspecial
 # 브랜치 전환
 git switch feature/update-header
 
+# 아래는 기능과 관계없는 변경 사항을 "main" 브랜치로부터 가져옴으로써 Pull Request 시에 Conflict을 줄여줍니다.
+git checkout main -- docs
+git checkout main -- README.md
+
 # CodeCommit 리모트 리포지터리에 해당 브랜치 푸시
+git commit -am "feature/update-header"
 git push --set-upstream ccorigin feature/update-header
 
 # AWS CodeCommit 콘솔 화면에서 Pull Request를 생성하고 이를 ```main``` 브랜치에 병합합니다.
@@ -604,7 +609,7 @@ git push --set-upstream ccorigin feature/update-header
 (CDK로 생성된 경우)<br>
 ![Create Pull Request](./docs/assets/create-pull-request-01.png)
 
-(테라폼으로 생성된 경우)<br>
+(참고) 테라폼으로 생성된 경우 아래와 같이 리포지터리 이름이 다를 수 있습니다.<br>
 ![Create Pull Request](./docs/assets/create-pull-request-terraform-01.png)
 
 6. 어플리케이션을 신규 배포하면서 Canary 배포가 동작함을 확인합니다.<br>
@@ -656,16 +661,26 @@ curl --location ${API_URL}/flightspecials/1/header \
 
 우리는 여기에서 한발 더 나아가 FlightSpecial의 헤더가 변경될 때 해당 마이크로서비스 도메인 이벤트를 다른 마이크로서비스로 알리고 싶으며, 이를 위해 아파치 카프카를 사용해 보도록 하겠습니다.
 
-1. ```feature/kafka``` 브랜치 병합
+1. ```feature/kafka``` 브랜치 병합<br>
 기본적인 코드는 이미 ```feature/kafka``` 브랜치에 구현되어 있으며 이 브랜치를 ```main``` 브랜치에 병합하여 일단 배포해 보도록 하겠습니다.
 
 ```bash
 cd ~/environment/m2m-flightspecial
 
+git switch main
+
+# 우선 리모트 리포지터리에 이전 과정에서 Pull Request로 병합된 소스 코드를 가져옵니다.
+git pull
+
 # feature/kafka 브랜치로 전환
 git switch feature/kafka
 
+# 아래는 기능과 관계없는 변경 사항을 "main" 브랜치로부터 가져옴으로써 Pull Request 시에 Conflict을 줄여줍니다.
+git checkout main -- docs
+git checkout main -- README.md
+
 # CodeCommit 리모트 리포지터리에 해당 브랜치 푸시
+git commit -am "feature/kafka"
 git push --set-upstream ccorigin feature/kafka
 
 # AWS CodeCommit 콘솔 화면에서 Pull Request를 생성하고 이를 ```main``` 브랜치에 병합합니다.
