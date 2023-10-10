@@ -229,8 +229,6 @@ cd m2m-flightspecial
    
    # CodeCommit 소스 리포지터리(ccorigin으로 명명)와 연결
    git remote add ccorigin $APP_CODECOMMIT_URL
-   # (예시)
-   # git remote add origin https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpecialCICDStack-SourceRepository
    
    # 소스 리포지터리에 푸시
    git push --set-upstream ccorigin main
@@ -245,8 +243,6 @@ cd m2m-flightspecial
    
    # CodeCommit 소스 리포지터리(ccorigin으로 명명)와 연결
    git remote add ccorigin $APP_CODECOMMIT_URL
-   # (예시)
-   # git remote add origin https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/M2M-FlightSpecialCICDStack-SourceRepository
    
    # 소스 리포지터리에 푸시
    git push --set-upstream ccorigin main
@@ -325,7 +321,7 @@ aws iam create-service-specific-credential --user-name argocd --service-name cod
    ```
 ![ArgoCD Repository Connect](./docs/assets/argocd-repository-information.png)
 
-- Application 텝에서 NewApp버튼을 클릭합니다. Application Name 에는 ```flightspecials```를, Project는 default를 입력합니다. Sync Policy에는 "Manual"을, Repository URL에는 앞서 설정한 배포 리포지터리를, PATH에는 ```.```을 각각 입력합니다. Destination 섹션의 Cluster URL에는 ```https://kubernetes.default.svc```, Namespace에는 ```flightspecials```를 입력하고 상단의 Create를 클릭합니다.<br>
+- Application 텝에서 NewApp버튼을 클릭합니다. Application Name 에는 ```flightspecials```를, Project는 ```default```를 입력합니다. Sync Policy에는 "Manual"을, Repository URL에는 앞서 설정한 배포 리포지터리를, PATH에는 ```.```을 각각 입력합니다. Destination 섹션의 Cluster URL에는 ```https://kubernetes.default.svc```, Namespace에는 ```flightspecials```를 입력하고 상단의 Create를 클릭합니다.<br>
 ![ArgoCD FlightSpecials App](./docs/assets/argcd-app-flightspecials.png)
 
 ## 5. ArgoCD 배포 상태 확인<br>
@@ -476,18 +472,18 @@ FlightSpecials 마이크로서비스의 PO (Product Owner)는 Progressive Delive
 
 1. (옵션) Argo Rollouts Dashboard 사용을 위해 Plugin 설치<br>
 우리는 이미 대시보드를 설치해 두었으므로 아래 Kubectl Plugin은 옵션으로 설치합니다.<br>
- ```bash
- curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
- chmod +x ./kubectl-argo-rollouts-linux-amd64
- sudo mv ./kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
- kubectl argo rollouts version
- ```
+```bash
+curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
+chmod +x ./kubectl-argo-rollouts-linux-amd64
+sudo mv ./kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
+kubectl argo rollouts version
+```
 
 2. Argo Rollouts 대시보드 확인<br>
 ```bash
 # Argo Rollouts 접속 주소 확인
 export ARGO_ROLLOUTS_DASHBOARD_URL=`kubectl get ingress/argo-rollouts-dashboard -n argo-rollouts -o json | jq --raw-output .status.loadBalancer.ingress[0].hostname`
-echo http://${ARGO_ROLLOUTS_DASHBOARD_URL}
+echo http://${ARGO_ROLLOUTS_DASHBOARD_URL}/rollouts 
 ```
 
 3. 위에서 확인한 ```http://<Argo Rollouts Dashboard URL>```으로 접속해 봅니다.<br>
@@ -526,7 +522,7 @@ spec:
     spec:
       serviceAccountName: flightspecials-service-account
       containers:
-        - image: "{{ .Values.image.repository }}:{{ .Values.image.tag | replace ":" "" }}"
+        - image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           name: {{ .Values.app.name }}
           imagePullPolicy: Always
           ports:
@@ -546,7 +542,7 @@ spec:
                   key: environment
                   name: flightspecials-configmap
             - name: JAVA_OPTIONS
-              value: "-Dspring.profiles.active=$S_{SPRING_PROFILES_ACTIVE}"
+              value: "-Dspring.profiles.active=${SPRING_PROFILES_ACTIVE}"
             - name: SPRING_PROFILES_ACTIVE
               valueFrom:
                 configMapKeyRef:
@@ -591,21 +587,30 @@ git commit -am "Argo Rollouts Applied"
 git push
 ```
 
-5. 해당 기능이 구현된 소스를 ```main``` 브랜치에 병합합니다. 이 기능은 강사에 의해 미리 구현되어 원본 Github Repository의```feature/update-header``` 브랜치에 올라가 있습니다.
+5. ```FlightSpecials``` 어플리케이션에서 해당 기능이 구현된 소스를 ```main``` 브랜치에 병합합니다. 이 기능은 강사에 의해 미리 구현되어 원본 Github Repository의```feature/update-header``` 브랜치에 올라가 있습니다.
 
 ```bash
+cd ~/environment/m2m-flightspecial
+
 # 브랜치 전환
 git switch feature/update-header
 
+# 아래는 기능과 관계없는 변경 사항을 "main" 브랜치로부터 가져옴으로써 Pull Request 시에 Conflict을 줄여줍니다.
+git checkout main -- docs
+git checkout main -- README.md
+
 # CodeCommit 리모트 리포지터리에 해당 브랜치 푸시
+git commit -am "feature/update-header"
 git push --set-upstream ccorigin feature/update-header
 
 # AWS CodeCommit 콘솔 화면에서 Pull Request를 생성하고 이를 ```main``` 브랜치에 병합합니다.
 # 참고: https://catalog.workshops.aws/cicdonaws/ko-KR/lab02/6-create-pull-request
 ```
-
+(CDK로 생성된 경우)<br>
 ![Create Pull Request](./docs/assets/create-pull-request-01.png)
 
+(참고) 테라폼으로 생성된 경우 아래와 같이 리포지터리 이름이 다를 수 있습니다.<br>
+![Create Pull Request](./docs/assets/create-pull-request-terraform-01.png)
 
 6. 어플리케이션을 신규 배포하면서 Canary 배포가 동작함을 확인합니다.<br>
 
@@ -656,16 +661,26 @@ curl --location ${API_URL}/flightspecials/1/header \
 
 우리는 여기에서 한발 더 나아가 FlightSpecial의 헤더가 변경될 때 해당 마이크로서비스 도메인 이벤트를 다른 마이크로서비스로 알리고 싶으며, 이를 위해 아파치 카프카를 사용해 보도록 하겠습니다.
 
-1. ```feature/kafka``` 브랜치 병합
+1. ```feature/kafka``` 브랜치 병합<br>
 기본적인 코드는 이미 ```feature/kafka``` 브랜치에 구현되어 있으며 이 브랜치를 ```main``` 브랜치에 병합하여 일단 배포해 보도록 하겠습니다.
 
 ```bash
 cd ~/environment/m2m-flightspecial
 
+git switch main
+
+# 우선 리모트 리포지터리에 이전 과정에서 Pull Request로 병합된 소스 코드를 가져옵니다.
+git pull
+
 # feature/kafka 브랜치로 전환
 git switch feature/kafka
 
+# 아래는 기능과 관계없는 변경 사항을 "main" 브랜치로부터 가져옴으로써 Pull Request 시에 Conflict을 줄여줍니다.
+git checkout main -- docs
+git checkout main -- README.md
+
 # CodeCommit 리모트 리포지터리에 해당 브랜치 푸시
+git commit -am "feature/kafka"
 git push --set-upstream ccorigin feature/kafka
 
 # AWS CodeCommit 콘솔 화면에서 Pull Request를 생성하고 이를 ```main``` 브랜치에 병합합니다.
