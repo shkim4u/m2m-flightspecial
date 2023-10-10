@@ -533,8 +533,8 @@ spec:
               memory: "256Mi"
               cpu: "250m"
             limits:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: "2048Mi"
+              cpu: "1000m"
           env:
             - name: PROFILE
               valueFrom:
@@ -751,13 +751,25 @@ curl --location ${API_URL}/flightspecials/1/header \
 
 ### 7.1. Amazon MSK 엔드포인트 수정
 
-1. 카프카 엔드포인트 수정
+1. 카프카 엔드포인트 수정<br>
+
 사실 ```feature/kafka``` 브랜치에 포함된 Amazon MSK의 클라이언트 엔드포인트는 별도의 테스트 환경에서 동작하도록 설정된 것이므로, 실습 환경의 그것으로 변경되어야 합니다.
 
 아래와 같이 우선 실습 환경에 배포된 Amazon MSK의 엔드포인트를 확인하도록 하겠습니다.<br>
 
+(CDK를 사용하여 자원을 배포하였을 경우)
 ```bash
 export KAFKA_CLUSTER_ARN_QUOTED=`aws kafka list-clusters-v2 --query 'ClusterInfoList[?ClusterName==\`M2M-MskStack-MSK-Cluster\`].ClusterArn | [0]'`
+export KAFKA_CLUSTER_ARN=`echo $KAFKA_CLUSTER_ARN_QUOTED | tr -d '"'`
+echo $KAFKA_CLUSTER_ARN
+
+export KAFKA_BOOTSTRAP_SERVERS=`aws kafka get-bootstrap-brokers --cluster-arn ${KAFKA_CLUSTER_ARN} --query BootstrapBrokerStringSaslIam --output=text`
+echo $KAFKA_BOOTSTRAP_SERVERS
+```
+
+(테라폼을 사용하여 자원을 배포하였을 경우)
+```bash
+export KAFKA_CLUSTER_ARN_QUOTED=`aws kafka list-clusters-v2 --query 'ClusterInfoList[?ClusterName==\`M2M-MSK-Cluster\`].ClusterArn | [0]'`
 export KAFKA_CLUSTER_ARN=`echo $KAFKA_CLUSTER_ARN_QUOTED | tr -d '"'`
 echo $KAFKA_CLUSTER_ARN
 
@@ -779,7 +791,8 @@ yq -ie 'select(.spring.config.activate.on-profile == "test") |= .spring.kafka.bo
 ```
 
 ### 7.2. Amazon MSK IAM 인증 의존성 추가
-1. Amazon MSK (Managaed Streaming for Apache Kafka) 인증을 위한 어플리케이션 의존성 추가
+1. Amazon MSK (Managaed Streaming for Apache Kafka) 인증을 위한 어플리케이션 의존성 추가<br>
+
 AWS는 관리형 카프카 (MSK)를 자바 어플리케이션에서 접속하기 위하여 IAM 인증을 활용하는 기능을 지원하며, 이를 위해 SASL/SSL 라이브러리를 어플리케이션 의존성에 다음과 같이 수정합니다.
 
 ```bash
@@ -799,7 +812,8 @@ implementation 'software.amazon.msk:aws-msk-iam-auth:1.1.7'
 
 (꼭) 파일을 CTRL (혹은 CMD) + S를 눌러 저장합니다.
 
-2. 2.에서 추가된 카프카 접속 의존성 라이브러리 설정
+2. 1.에서 추가된 카프카 접속 의존성 라이브러리 설정<br>
+
 ```application.yml``` 파일에 2.에서 추가된 Amazon MSK IAM 지원 라이브러리의 관련 설정을 해줍니다.
 
 Cloud9에서 파일을 연 후...
@@ -830,7 +844,8 @@ cloud:
 ![](./docs/assets/spring-cloud-stream-kafka-amazon-msk-sasl-config.png)
 
 ### 7.3. 카프카 바인딩 추가 및 소스 수정
-1. Spring Cloud Stream Bindings 바인딩 추가
+1. Spring Cloud Stream Bindings 바인딩 추가<br>
+
 FlightSpecials 헤더 업데이트가 발생하면 해당 이벤트를 Publish할 대상 Binding을 ```application.yml``` 파일에 아래와 같이 추가합니다.
 추가되는 라인은 대략 135라인 근방입니다.
 
@@ -845,8 +860,9 @@ flightspecial-update-header-out-0:
 해당 설정을 추가한 모습은 다음과 같습니다.<br>
 ![](./docs/assets/spring-cloud-stream-binding-update-header.png)
 
-2. 소스 수정
-위 4.에서 추가한 Stream Binding을 이용하도록 어플리케이션을 수정합니다.<br>
+2. 소스 수정<br>
+
+위에서 추가한 Stream Binding을 이용하도록 어플리케이션을 수정합니다.<br>
 
 ```bash
 cd ~/environment/m2m-flightspecial
@@ -919,6 +935,7 @@ FlightSpecials Pod를 Describe (해당 Pod에 대해 ```kubectl describe``` 혹�
 ![](./docs/assets/flightspecial-iam-permission-policy-msk-02.png)<br>
 
 JSON 형식으로 전환하고 아래 정책을 정책 편집기에 붙여넣습니다.<br>
+(CDK로 자원을 생성하였을 경우)<br>
 ```json
 {
     "Version": "2012-10-17",
@@ -943,18 +960,47 @@ JSON 형식으로 전환하고 아래 정책을 정책 편집기에 붙여넣습
     ]
 }
 ```
+(테라폼으로 자원을 생성하였을 경우)<br>
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "kafka:*",
+                "kafka-cluster:Connect",
+                "kafka-cluster:*Topic*",
+                "kafka-cluster:ReadData",
+                "kafka-cluster:WriteData",
+                "kafka-cluster:DescribeGroup",
+                "kafka-cluster:AlterGroup"
+            ],
+            "Resource": [
+                "arn:aws:kafka:ap-northeast-2:<ACCOUNT_ID>:cluster/M2M-MSK-Cluster/<MSK_ARN_PART>>",
+                "arn:aws:kafka:ap-northeast-2:<ACCOUNT_ID>:topic/M2M-MSK-Cluster/*",
+                "arn:aws:kafka:ap-northeast-2:<ACCOUNT_ID>:group/M2M-MSK-Cluster/*"
+            ]
+        }
+    ]
+}
+```
 
 ![](./docs/assets/flightspecial-iam-permission-policy-msk-03.png)<br>
 
 
 > (참고)<br>
-> Amazon MSK 클러스터의 ARN은 아래 명령으로 확인할 수 있습니다.
+> Amazon MSK 클러스터의 ARN은 아래 명령으로 확인할 수 있습니다.<br>
+> (CDK로 생성하였을 경우)
 >```bash
->export KAFKA_CLUSTER_ARN_QUOTED=`aws kafka list-clusters-v2 --query 'ClusterInfoList[?ClusterName==\`M2M-MskStack-MSK-Cluster\`].ClusterArn | [0]'`
->export KAFKA_CLUSTER_ARN=`echo $MSK_CLUSTER_ARN_QUOTED | tr -d '"'`
+>export KAFKA_CLUSTER_ARN=`aws kafka list-clusters-v2 --query 'ClusterInfoList[?ClusterName==\`M2M-MskStack-MSK-Cluster\`].ClusterArn | [0]' --output text`
 >echo $KAFKA_CLUSTER_ARN
 >```
-> 
+> (테라폼으로 생성하였을 경우)<br>
+>```bash
+>export KAFKA_CLUSTER_ARN=`aws kafka list-clusters-v2 --query 'ClusterInfoList[?ClusterName==\`M2M-MSK-Cluster\`].ClusterArn | [0]' --output text`
+>echo $KAFKA_CLUSTER_ARN
+>``` 
 > 혹은 AWS 콘솔에서 Amazon MSK 클러스터의 ARN을 복사하여 ```Resource``` 부분의 첫번째 항목에 전체 붙여넣기 한 후 작업하면 수월합니다.<br>
 > ![](./docs/assets/amazon-msk-arn.png)
 
@@ -991,12 +1037,14 @@ curl --location ${API_URL}/flightspecials/1/header \
 
 다음과 같이 수행합니다.
 
-1. k9s를 사용하여 FlightSpecials Pod 중 하나에 쉘 접속
+1. k9s를 사용하여 FlightSpecials Pod 중 하나에 쉘 접속<br>
+
 ```k9s```에서 ```flightspecials-xxx```로 표시되는 Pod 중 하나를 선택한 후 's' 키보드를 눌러 쉘로 접속합니다.
 
 ![](./docs/assets/shell-login-flightspecials-pod-k9s.png)
 
-2. Kafka CLI 및 Amazon MSK IAM 인증 라이브러리 설치
+2. Kafka CLI 및 Amazon MSK IAM 인증 라이브러리 설치<br>
+
 접속한 FlightSpecials 쉘 (Shell)에서 아래와 같이 수행합니다.
 
 ```bash
@@ -1013,15 +1061,27 @@ echo $CLASSPATH
 ![](./docs/assets/flightspecial-pod-tooling-kafka.png)
 
 3. 환경 설정<br>
+
 (Cloud9 터미널) 접속한 Pod 쉘이 아닌 Cloud9 터미널에서 우선 카프카 클러스터의 브로커 정보를 알아냅니다.
 
+(CDK를 사용하여 자원을 배포한 경우)
 ```bash
-export KAFKA_CLUSTER_ARN_QUOTED=`aws kafka list-clusters-v2 --query 'ClusterInfoList[?ClusterName==\`M2M-MskStack-MSK-Cluster\`].ClusterArn | [0]'`
-export KAFKA_CLUSTER_ARN=`echo $MSK_CLUSTER_ARN_QUOTED | tr -d '"'`
+export KAFKA_CLUSTER_ARN=`aws kafka list-clusters-v2 --query 'ClusterInfoList[?ClusterName==\`M2M-MskStack-MSK-Cluster\`].ClusterArn | [0]' --output text`
 echo $KAFKA_CLUSTER_ARN
 
 export KAFKA_BOOTSTRAP_SERVERS=`aws kafka get-bootstrap-brokers --cluster-arn ${KAFKA_CLUSTER_ARN} --query BootstrapBrokerStringSaslIam --output=text`
 echo $KAFKA_BOOTSTRAP_SERVERS
+echo "export KAFKA_BROKERS=${KAFKA_BOOTSTRAP_SERVERS}"
+```
+
+(테라폼을 사용하여 자원을 배포한 경우)
+```bash
+export KAFKA_CLUSTER_ARN=`aws kafka list-clusters-v2 --query 'ClusterInfoList[?ClusterName==\`M2M-MSK-Cluster\`].ClusterArn | [0]' --output text`
+echo $KAFKA_CLUSTER_ARN
+
+export KAFKA_BOOTSTRAP_SERVERS=`aws kafka get-bootstrap-brokers --cluster-arn ${KAFKA_CLUSTER_ARN} --query BootstrapBrokerStringSaslIam --output=text`
+echo $KAFKA_BOOTSTRAP_SERVERS
+echo "export KAFKA_BROKERS=${KAFKA_BOOTSTRAP_SERVERS}"
 ```
 
 (FlightSpecial Pod 쉘) 위에서 복사한 정보를 사용하여 KAFKA_BROKERS 환경 변수를 설정합니다.<br>
@@ -1032,7 +1092,8 @@ export KAFKA_BROKERS=<자신의 카프카 브로커 정보로 설정>
 
 ![](./docs/assets/msk-broker.png)
 
-4. 카프카 CLI 클라이언트 설정
+4. 카프카 CLI 클라이언트 설정<br>
+
 카프카 CLI도 AWS IAM 인증을 통해야하므로 해당 설정을 아래와 같이 해줍니다.<br>
 ```bash
 cat > client.properties <<\EOF
@@ -1045,9 +1106,16 @@ EOF
 
 또한 FlightSpecials Pod의 기본 쉘이 ```sh (Bourne Shell)```이므로 우리가 사용할 ```kafka-topics.sh```, ```kafka-run-class.sh```, ```kafka-console-consumer.sh``` 파일의 Interpreter를 이에 맞게 수정해 줍니다.
 
+```bash
+sed -i 's/bin\/bash/bin\/sh/g' kafka-topics.sh
+sed -i 's/bin\/bash/bin\/sh/g' kafka-run-class.sh
+sed -i 's/bin\/bash/bin\/sh/g' kafka-console-consumer.sh
+```
+
 ![](./docs/assets/kafka-cli-change-shell-interpreter.png)
 
-5. 토픽 목록 얻어오기
+5. 토픽 목록 얻어오기<br>
+
 우리는 이제 카프카 브로커에서 접속하여 컨슈머가 FlightSpecials 이벤트를 정상적으로 수신하는지 확인할 차례입니다.<br>
 
 그 이전에 우선 카프카 토픽 목록을 아래와 같이 조회해 보도록 하겠습니다.
