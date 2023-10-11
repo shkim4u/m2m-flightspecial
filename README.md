@@ -1094,7 +1094,7 @@ watch -n 1 "curl --location $API_URL/flightspecials/1/header --header 'Content-T
 2. 백엔드와 프론트엔드가 섞인 MVC UI 요소를 React와 같은 현대적인 기술 스택을 사용하여 분리
 3. 병행 운영 시 FlightSpecials 데이터를 (PostgreSQL) 기존 모놀리스 TravelBuddy 데이터베이스 (MySQL)로 역동기화
 
-여기서 우리는 3번을 도적 과제로 선정하여 수행해보도록 하겠습니다.
+여기서 우리는 3번을 도전 과제로 선정하여 수행해보도록 하겠습니다.
 
 다음과 같은 방법으로 시작할 수 있습니다.
 * AWS DMS 사용
